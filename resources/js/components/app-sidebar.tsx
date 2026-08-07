@@ -1,19 +1,19 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, usePoll } from '@inertiajs/react';
 import {
-    BookOpen,
     Bell,
     ClipboardPlus,
     CalendarSync,
-    FolderGit2,
     LayoutGrid,
     MessageCircle,
     ListChecks,
     UsersRound,
     Clock8,
     ScrollText,
+    CalendarDays,
+    FileCheck2,
+    ServerCog,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -31,23 +31,34 @@ import { index as activityLogs } from '@/routes/company/activity-logs';
 import { index as approvalInbox } from '@/routes/company/approvals';
 import { edit as attendancePolicy } from '@/routes/company/attendance-policy';
 import { index as managedOjtsIndex } from '@/routes/company/ojts';
+import { index as operationsIndex } from '@/routes/company/operations';
+import { index as dtrSubmissionsIndex } from '@/routes/dtr-submissions';
+import { index as leaveIndex } from '@/routes/leave';
 import { index as messagesIndex } from '@/routes/messages';
 import { index as notificationsIndex } from '@/routes/notifications';
 import { index as reportsIndex } from '@/routes/reports';
 import { dashboard as supervisorDashboard } from '@/routes/supervisor';
+import { index as tasksIndex } from '@/routes/tasks';
 import type { NavItem } from '@/types';
 
-const mainNavItemsBase: NavItem[] = [
+const ojtNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: 'Home',
         href: dashboard(),
         icon: LayoutGrid,
     },
     {
-        title: 'Daily reports',
+        title: 'Tasks',
+        href: tasksIndex(),
+        icon: ListChecks,
+    },
+    {
+        title: 'Attendance & Reports',
         href: reportsIndex(),
         icon: ClipboardPlus,
     },
+    { title: 'Leave', href: leaveIndex(), icon: CalendarDays },
+    { title: 'DTR sign-off', href: dtrSubmissionsIndex(), icon: FileCheck2 },
     {
         title: 'Messages',
         href: messagesIndex(),
@@ -57,27 +68,16 @@ const mainNavItemsBase: NavItem[] = [
 
 const supervisorNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: 'My OJTs',
         href: supervisorDashboard(),
         icon: LayoutGrid,
     },
+    { title: 'Leave requests', href: leaveIndex(), icon: CalendarDays },
+    { title: 'DTR sign-off', href: dtrSubmissionsIndex(), icon: FileCheck2 },
     {
         title: 'Messages',
         href: messagesIndex(),
         icon: MessageCircle,
-    },
-];
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
     },
 ];
 
@@ -87,8 +87,15 @@ export function AppSidebar() {
             pendingReportsCount: number;
             unreadNotificationsCount: number;
             pendingCorrectionsCount: number;
+            unreadMessagesCount: number;
         };
     }>().props;
+    usePoll(15_000, { only: ['navigation'] }, { mode: 'rest' });
+
+    const withMessageBadge = (item: NavItem): NavItem =>
+        item.title === 'Messages'
+            ? { ...item, badge: navigation.unreadMessagesCount }
+            : item;
     const notificationsItem: NavItem = {
         title: 'Notifications',
         href: notificationsIndex(),
@@ -102,25 +109,40 @@ export function AppSidebar() {
         badge: navigation.pendingCorrectionsCount,
     };
     const companyNavItems: NavItem[] = [
-        mainNavItemsBase[0],
         {
-            title: 'Approval Inbox',
+            title: 'Overview',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+        {
+            title: 'Review Reports',
             href: approvalInbox(),
             icon: ListChecks,
             badge: navigation.pendingReportsCount,
         },
         {
-            title: 'Managed OJTs',
+            title: 'OJT Accounts',
             href: managedOjtsIndex(),
             icon: UsersRound,
         },
         {
-            title: 'Attendance Policy',
+            title: 'Work Schedule',
             href: attendancePolicy(),
             icon: Clock8,
         },
+        { title: 'Leave & Calendar', href: leaveIndex(), icon: CalendarDays },
         {
-            title: 'Activity Logs',
+            title: 'DTR sign-off',
+            href: dtrSubmissionsIndex(),
+            icon: FileCheck2,
+        },
+        {
+            title: 'System Operations',
+            href: operationsIndex(),
+            icon: ServerCog,
+        },
+        {
+            title: 'Audit Trail',
             href: activityLogs(),
             icon: ScrollText,
         },
@@ -131,8 +153,16 @@ export function AppSidebar() {
         auth.user.role === 'company_admin'
             ? companyNavItems
             : auth.user.role === 'supervisor'
-              ? [...supervisorNavItems, correctionsItem, notificationsItem]
-              : [...mainNavItemsBase, correctionsItem, notificationsItem];
+              ? [
+                    ...supervisorNavItems.map(withMessageBadge),
+                    correctionsItem,
+                    notificationsItem,
+                ]
+              : [
+                    ...ojtNavItems.map(withMessageBadge),
+                    correctionsItem,
+                    notificationsItem,
+                ];
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -153,7 +183,6 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

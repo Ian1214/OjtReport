@@ -55,6 +55,8 @@ type Ojt = {
     completedHours: number;
     hoursLeft: number;
     isComplete: boolean;
+    isOnline: boolean;
+    lastSeenAt: string | null;
     setupDelivery: {
         status: 'queued' | 'sent' | 'failed';
         queuedAt: string;
@@ -62,6 +64,14 @@ type Ojt = {
         failedAt: string | null;
         failureReason: string | null;
     } | null;
+};
+
+type Supervisor = {
+    id: number;
+    name: string;
+    email: string;
+    isOnline: boolean;
+    lastSeenAt: string | null;
 };
 
 type Props = {
@@ -82,7 +92,7 @@ type Props = {
         activeOjtCount: number;
         completedOjtCount: number;
     };
-    supervisors: Array<{ id: number; name: string; email: string }>;
+    supervisors: Supervisor[];
 };
 
 type CreatedAccount = {
@@ -107,7 +117,7 @@ export default function CompanyDashboard({
     const [status, setStatus] = useState(filters.status);
     const createdAccount = flash?.createdAccount;
 
-    usePoll(10_000, { only: ['ojts'] });
+    usePoll(15_000, { only: ['ojts', 'supervisors'] }, { mode: 'rest' });
 
     function applyFilters(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -338,7 +348,7 @@ function CreateOjtForm({
     supervisors,
     onSuccess,
 }: {
-    supervisors: Array<{ id: number; name: string; email: string }>;
+    supervisors: Supervisor[];
     onSuccess: () => void;
 }) {
     return (
@@ -446,7 +456,10 @@ function CreateOjtForm({
                                                 value={supervisor.id}
                                             >
                                                 {supervisor.name} ·{' '}
-                                                {supervisor.email}
+                                                {supervisor.email} ·{' '}
+                                                {supervisor.isOnline
+                                                    ? 'Online'
+                                                    : 'Offline'}
                                             </option>
                                         ))}
                                     </select>
@@ -538,7 +551,7 @@ function OjtProgressCard({
     supervisors,
 }: {
     ojt: Ojt;
-    supervisors: Array<{ id: number; name: string; email: string }>;
+    supervisors: Supervisor[];
 }) {
     const progress = Math.min(
         100,
@@ -549,7 +562,22 @@ function OjtProgressCard({
         <article className="rounded-xl border bg-muted/15 p-4 transition-colors hover:bg-muted/30 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                    <p className="truncate font-semibold">{ojt.name}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-semibold">{ojt.name}</p>
+                        <Badge
+                            variant="outline"
+                            className={
+                                ojt.isOnline
+                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                    : 'text-muted-foreground'
+                            }
+                        >
+                            <span
+                                className={`size-1.5 rounded-full ${ojt.isOnline ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`}
+                            />
+                            {ojt.isOnline ? 'Online' : 'Offline'}
+                        </Badge>
+                    </div>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {ojt.studentId} · {ojt.position} · {ojt.department}
                     </p>
@@ -621,6 +649,7 @@ function OjtProgressCard({
                                     value={supervisor.id}
                                 >
                                     {supervisor.name}
+                                    {supervisor.isOnline ? ' · Online' : ''}
                                 </option>
                             ))}
                         </select>
@@ -688,7 +717,9 @@ function SetupDeliveryStatus({ ojt }: { ojt: Ojt }) {
                     </span>
                 </div>
                 <span className="text-muted-foreground">
-                    {timestamp === null ? 'Just now' : formatDeliveryTime(timestamp)}
+                    {timestamp === null
+                        ? 'Just now'
+                        : formatDeliveryTime(timestamp)}
                 </span>
             </div>
             <p className="mt-1.5 break-all text-muted-foreground">
@@ -738,10 +769,11 @@ function OjtDeletionDialog({ ojt }: { ojt: Ojt }) {
                 </Button>
             </DialogTrigger>
             <DialogContent>
-                <DialogTitle>Delete {ojt.name}&apos;s account?</DialogTitle>
+                <DialogTitle>Archive {ojt.name}&apos;s account?</DialogTitle>
                 <DialogDescription>
-                    This permanently removes the OJT account and all of its
-                    daily reports. This cannot be undone.
+                    The OJT will no longer be able to sign in. Reports and audit
+                    history are retained securely until the retention period
+                    ends.
                 </DialogDescription>
                 <Form {...destroyOjt.form(ojt.id)}>
                     {({ processing }) => (
@@ -757,7 +789,7 @@ function OjtDeletionDialog({ ojt }: { ojt: Ojt }) {
                                 disabled={processing}
                             >
                                 {processing && <Spinner />}
-                                Delete OJT account
+                                Archive OJT account
                             </Button>
                         </DialogFooter>
                     )}

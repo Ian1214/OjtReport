@@ -148,6 +148,28 @@ function TwoFactorVerificationStep({
     const [code, setCode] = useState<string>('');
     const pinInputContainerRef = useRef<HTMLDivElement>(null);
 
+    const getCodeError = (errors: unknown): string | undefined => {
+        if (!errors || typeof errors !== 'object') {
+            return undefined;
+        }
+
+        const validationErrors = errors as Record<string, unknown>;
+
+        if (typeof validationErrors.code === 'string') {
+            return validationErrors.code;
+        }
+
+        const errorBag = validationErrors.confirmTwoFactorAuthentication;
+
+        if (errorBag && typeof errorBag === 'object') {
+            const codeError = (errorBag as Record<string, unknown>).code;
+
+            return typeof codeError === 'string' ? codeError : undefined;
+        }
+
+        return undefined;
+    };
+
     useEffect(() => {
         setTimeout(() => {
             pinInputContainerRef.current?.querySelector('input')?.focus();
@@ -155,19 +177,8 @@ function TwoFactorVerificationStep({
     }, []);
 
     return (
-        <Form
-            {...confirm.form()}
-            onSuccess={() => onClose()}
-            resetOnError
-            resetOnSuccess
-        >
-            {({
-                processing,
-                errors,
-            }: {
-                processing: boolean;
-                errors?: { confirmTwoFactorAuthentication?: { code?: string } };
-            }) => (
+        <Form {...confirm.form()} onSuccess={() => onClose()} resetOnSuccess>
+            {({ processing, errors }) => (
                 <>
                     <div
                         ref={pinInputContainerRef}
@@ -178,6 +189,7 @@ function TwoFactorVerificationStep({
                                 id="otp"
                                 name="code"
                                 maxLength={OTP_MAX_LENGTH}
+                                value={code}
                                 onChange={setCode}
                                 disabled={processing}
                                 pattern={REGEXP_ONLY_DIGITS}
@@ -195,11 +207,13 @@ function TwoFactorVerificationStep({
                                     )}
                                 </InputOTPGroup>
                             </InputOTP>
-                            <InputError
-                                message={
-                                    errors?.confirmTwoFactorAuthentication?.code
-                                }
-                            />
+                            <InputError message={getCodeError(errors)} />
+                            <p className="text-center text-xs leading-relaxed text-muted-foreground">
+                                Use the current code for the QR shown in this
+                                setup. Keep your phone&apos;s date and time set
+                                to automatic, then retry with a newly generated
+                                code if the timer is about to expire.
+                            </p>
                         </div>
 
                         <div className="flex w-full space-x-5">

@@ -26,7 +26,9 @@ export default function Register() {
                     <>
                         <div className="grid gap-5">
                             <div className="grid gap-2">
-                                <Label htmlFor="company_name">Company name</Label>
+                                <Label htmlFor="company_name">
+                                    Company name
+                                </Label>
                                 <Input
                                     id="company_name"
                                     name="company_name"
@@ -51,7 +53,9 @@ export default function Register() {
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Work email address</Label>
+                                <Label htmlFor="email">
+                                    Work email address
+                                </Label>
                                 <Input
                                     id="email"
                                     name="email"
@@ -90,9 +94,10 @@ export default function Register() {
                         </div>
 
                         <p className="rounded-xl border border-emerald-400/15 bg-emerald-400/5 px-4 py-3 text-sm leading-6 text-slate-300">
-                            After registration, you can create OJT accounts using
-                            each intern&apos;s real email address. They receive a secure
-                            account setup link and create their own password.
+                            After registration, you can create OJT accounts
+                            using each intern&apos;s real email address. They
+                            receive a secure account setup link and create their
+                            own password.
                         </p>
 
                         <div className="grid gap-2">
@@ -105,8 +110,8 @@ export default function Register() {
                                     className="mt-1 size-4 rounded border-white/20 accent-emerald-400"
                                 />
                                 <span>
-                                    I am authorized to register this company and I
-                                    agree to the{' '}
+                                    I am authorized to register this company and
+                                    I agree to the{' '}
                                     <TextLink
                                         href={terms()}
                                         className="text-emerald-300 hover:text-emerald-200"
@@ -161,6 +166,7 @@ function OnboardingStep({
 
 Register.layout = {
     title: 'Set up your company workspace',
-    description: 'Create the administrator account that will manage your OJT team.',
+    description:
+        'Create the administrator account that will manage your OJT team.',
     wide: true,
 };

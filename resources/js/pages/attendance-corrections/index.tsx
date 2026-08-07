@@ -172,37 +172,81 @@ function CorrectionCard({
                 <div className="mt-5 grid gap-5">
                     <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/20 p-4">
                         <div>
-                            <p className="text-xs text-muted-foreground">Request status</p>
-                            <p className="mt-1 text-sm font-medium">Submitted {formatDateTime(correction.createdAt)}</p>
+                            <p className="text-xs text-muted-foreground">
+                                Request status
+                            </p>
+                            <p className="mt-1 text-sm font-medium">
+                                Submitted {formatDateTime(correction.createdAt)}
+                            </p>
                         </div>
                         <StatusBadge status={correction.status} />
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <TimeChange label="Time in" original={correction.originalTimeIn} proposed={correction.proposedTimeIn} />
-                        <TimeChange label="Time out" original={correction.originalTimeOut} proposed={correction.proposedTimeOut} />
+                        <TimeChange
+                            label="Time in"
+                            original={correction.originalTimeIn}
+                            proposed={correction.proposedTimeIn}
+                        />
+                        <TimeChange
+                            label="Time out"
+                            original={correction.originalTimeOut}
+                            proposed={correction.proposedTimeOut}
+                        />
                     </div>
                     <Note label="OJT reason" value={correction.reason} />
-                    {correction.supervisorComment && <Note label={`Supervisor review · ${correction.supervisorName ?? 'Supervisor'}`} value={correction.supervisorComment} />}
-                    {correction.adminComment && <Note label={`Administrator decision · ${correction.reviewerName ?? 'Administrator'}`} value={correction.adminComment} destructive={correction.status === 'rejected'} />}
+                    {correction.supervisorComment && (
+                        <Note
+                            label={`Supervisor review · ${correction.supervisorName ?? 'Supervisor'}`}
+                            value={correction.supervisorComment}
+                        />
+                    )}
+                    {correction.adminComment && (
+                        <Note
+                            label={`Administrator decision · ${correction.reviewerName ?? 'Administrator'}`}
+                            value={correction.adminComment}
+                            destructive={correction.status === 'rejected'}
+                        />
+                    )}
                     <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
-                        <DialogClose asChild><Button type="button" variant="secondary">Close</Button></DialogClose>
-                        {role === 'supervisor' && correction.status === 'pending_supervisor' && <SupervisorReviewDialog correction={correction} />}
-                        {role === 'company_admin' && correction.status === 'pending_admin' && (
-                            <>
-                                <AdminRejectDialog correction={correction} />
-                                <Form {...approve.form(correction.id)}>
-                                    {({ errors, processing }) => (
-                                        <div>
-                                            <InputError message={errors.correction} />
-                                            <Button type="submit" disabled={processing}>
-                                                {processing ? <Spinner /> : <CheckCircle2 />}
-                                                Approve correction
-                                            </Button>
-                                        </div>
-                                    )}
-                                </Form>
-                            </>
-                        )}
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">
+                                Close
+                            </Button>
+                        </DialogClose>
+                        {role === 'supervisor' &&
+                            correction.status === 'pending_supervisor' && (
+                                <SupervisorReviewDialog
+                                    correction={correction}
+                                />
+                            )}
+                        {role === 'company_admin' &&
+                            correction.status === 'pending_admin' && (
+                                <>
+                                    <AdminRejectDialog
+                                        correction={correction}
+                                    />
+                                    <Form {...approve.form(correction.id)}>
+                                        {({ errors, processing }) => (
+                                            <div>
+                                                <InputError
+                                                    message={errors.correction}
+                                                />
+                                                <Button
+                                                    type="submit"
+                                                    disabled={processing}
+                                                >
+                                                    {processing ? (
+                                                        <Spinner />
+                                                    ) : (
+                                                        <CheckCircle2 />
+                                                    )}
+                                                    Approve correction
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </Form>
+                                </>
+                            )}
                     </div>
                 </div>
             </DialogContent>
@@ -403,12 +447,12 @@ function PaginationButton({
 
 function descriptionForRole(role: Props['role']): string {
     if (role === 'ojt') {
-return 'Request corrections without changing the original attendance record. Every decision remains auditable.';
-}
+        return 'Request corrections without changing the original attendance record. Every decision remains auditable.';
+    }
 
     if (role === 'supervisor') {
-return 'Review correction evidence from your assigned OJTs and forward clear notes for final approval.';
-}
+        return 'Review correction evidence from your assigned OJTs and forward clear notes for final approval.';
+    }
 
     return 'Give final approval to reviewed attendance corrections and automatically recalculate approved hours.';
 }

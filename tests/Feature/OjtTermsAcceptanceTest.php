@@ -33,7 +33,8 @@ test('an OJT can accept the terms and continue to the dashboard', function () {
 
     $this->actingAs($ojt)
         ->post(route('ojt-terms.update'), ['terms' => '1'])
-        ->assertRedirect(route('dashboard', absolute: false));
+        ->assertRedirect(route('dashboard', absolute: false))
+        ->assertInertiaFlash('toast.type', 'success');
 
     expect($ojt->refresh()->terms_accepted_at)->not->toBeNull();
     expect(ActivityLog::query()

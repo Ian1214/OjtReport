@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Middleware\EnsureOjtTermsAccepted;
+use App\Http\Middleware\EnsurePrivilegedMfa;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\EnsureOjtTermsAccepted;
+use App\Http\Middleware\UpdateLastSeenAt;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,11 +18,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
             HandleAppearance::class,
             EnsureOjtTermsAccepted::class,
+            UpdateLastSeenAt::class,
+            EnsurePrivilegedMfa::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);

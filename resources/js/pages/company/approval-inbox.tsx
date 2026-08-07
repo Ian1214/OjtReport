@@ -327,7 +327,13 @@ function ReportCard({ report }: { report: Report }) {
                     <StatusBadge status={report.status} />
                     <Badge
                         variant="outline"
-                        className={report.attendanceStatus === 'late' ? 'border-amber-500/30 text-amber-700 dark:text-amber-300' : report.attendanceStatus === 'on_time' ? 'border-emerald-500/30 text-emerald-700 dark:text-emerald-300' : ''}
+                        className={
+                            report.attendanceStatus === 'late'
+                                ? 'border-amber-500/30 text-amber-700 dark:text-amber-300'
+                                : report.attendanceStatus === 'on_time'
+                                  ? 'border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                                  : ''
+                        }
                     >
                         {report.attendanceStatus === 'late'
                             ? `Late · ${report.lateMinutes ?? 0} min`
@@ -357,7 +363,13 @@ function ReportCard({ report }: { report: Report }) {
                     />
                     <Detail
                         label="Arrival status"
-                        value={report.attendanceStatus === 'late' ? `Late (${report.lateMinutes ?? 0} minutes)` : report.attendanceStatus === 'on_time' ? 'On time' : 'Not classified'}
+                        value={
+                            report.attendanceStatus === 'late'
+                                ? `Late (${report.lateMinutes ?? 0} minutes)`
+                                : report.attendanceStatus === 'on_time'
+                                  ? 'On time'
+                                  : 'Not classified'
+                        }
                     />
                 </div>
                 <div className="rounded-xl border bg-muted/15 p-4">

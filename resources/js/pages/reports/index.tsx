@@ -459,13 +459,19 @@ function PunctualityBadge({
     report: Pick<DailyReport, 'attendance_status' | 'late_minutes'>;
 }) {
     if (report.attendance_status === null) {
-        return <span className="inline-flex h-8 items-center rounded-md border px-2.5 text-xs font-semibold text-muted-foreground">Not classified</span>;
+        return (
+            <span className="inline-flex h-8 items-center rounded-md border px-2.5 text-xs font-semibold text-muted-foreground">
+                Not classified
+            </span>
+        );
     }
 
     const isLate = report.attendance_status === 'late';
 
     return (
-        <span className={`inline-flex h-8 items-center rounded-md border px-2.5 text-xs font-semibold ${isLate ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`}>
+        <span
+            className={`inline-flex h-8 items-center rounded-md border px-2.5 text-xs font-semibold ${isLate ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`}
+        >
             {isLate ? `Late · ${report.late_minutes ?? 0} min` : 'On time'}
         </span>
     );
@@ -478,7 +484,9 @@ function formatPunctuality(
         return `Late (${report.late_minutes ?? 0} minutes after the official start time)`;
     }
 
-    return report.attendance_status === 'on_time' ? 'On time' : 'Not classified';
+    return report.attendance_status === 'on_time'
+        ? 'On time'
+        : 'Not classified';
 }
 
 function EditReportDialog({ report }: { report: DailyReport }) {

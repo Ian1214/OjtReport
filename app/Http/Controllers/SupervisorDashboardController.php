@@ -19,8 +19,11 @@ class SupervisorDashboardController extends Controller
         return Inertia::render('supervisor/dashboard', [
             'ojts' => $supervisor->assignedOjts()
                 ->with(['assignedTasks' => fn ($query) => $query->latest()])
+                ->withCount(['sentDirectMessages as unread_messages_count' => fn ($query) => $query
+                    ->where('recipient_id', $supervisor->id)
+                    ->whereNull('read_at')])
                 ->orderBy('name')
-                ->get(['id', 'name', 'student_id', 'program', 'department', 'position'])
+                ->get(['id', 'name', 'student_id', 'program', 'department', 'position', 'last_seen_at'])
                 ->map(fn (User $ojt): array => [
                     'id' => $ojt->id,
                     'name' => $ojt->name,
@@ -28,6 +31,9 @@ class SupervisorDashboardController extends Controller
                     'program' => $ojt->program,
                     'department' => $ojt->department,
                     'position' => $ojt->position,
+                    'isOnline' => $ojt->isOnline(),
+                    'lastSeenAt' => $ojt->last_seen_at?->toIso8601String(),
+                    'unreadCount' => (int) $ojt->unread_messages_count,
                     'tasks' => $ojt->assignedTasks->map(fn ($task): array => [
                         'id' => $task->id,
                         'title' => $task->title,

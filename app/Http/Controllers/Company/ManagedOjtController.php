@@ -40,6 +40,7 @@ class ManagedOjtController extends Controller
                 'supervisor_name',
                 'required_hours',
                 'end_date',
+                'last_seen_at',
             ])
             ->with(['latestAccountSetupDelivery' => fn (HasOne $query): HasOne => $query->select([
                 'account_setup_deliveries.id',
@@ -82,6 +83,8 @@ class ManagedOjtController extends Controller
                     'completedHours' => (float) ($ojt->approved_daily_reports_sum_total_hours ?? 0),
                     'hoursLeft' => max(0, (float) $ojt->required_hours - (float) ($ojt->approved_daily_reports_sum_total_hours ?? 0)),
                     'isComplete' => $ojt->end_date !== null,
+                    'isOnline' => $ojt->isOnline(),
+                    'lastSeenAt' => $ojt->last_seen_at?->toIso8601String(),
                     'setupDelivery' => $ojt->latestAccountSetupDelivery === null ? null : [
                         'status' => $ojt->latestAccountSetupDelivery->status,
                         'queuedAt' => $ojt->latestAccountSetupDelivery->queued_at->toIso8601String(),
@@ -112,11 +115,13 @@ class ManagedOjtController extends Controller
             'supervisors' => $company->users()
                 ->where('role', 'supervisor')
                 ->orderBy('name')
-                ->get(['id', 'name', 'email'])
+                ->get(['id', 'name', 'email', 'last_seen_at'])
                 ->map(fn (User $supervisor): array => [
                     'id' => $supervisor->id,
                     'name' => $supervisor->name,
                     'email' => $supervisor->email,
+                    'isOnline' => $supervisor->isOnline(),
+                    'lastSeenAt' => $supervisor->last_seen_at?->toIso8601String(),
                 ]),
         ]);
     }

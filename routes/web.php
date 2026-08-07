@@ -1,21 +1,27 @@
 <?php
 
-use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\AttendanceCorrectionController;
-use App\Http\Controllers\Company\ManagedOjtController;
-use App\Http\Controllers\Company\AttendancePolicyController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Company\ActivityLogController;
+use App\Http\Controllers\Company\AttendancePolicyController;
+use App\Http\Controllers\Company\CompanyHolidayController;
 use App\Http\Controllers\Company\DailyReportReviewController;
-use App\Http\Controllers\Company\ReportApprovalInboxController;
+use App\Http\Controllers\Company\ManagedOjtController;
 use App\Http\Controllers\Company\OjtController;
+use App\Http\Controllers\Company\OperationsController;
+use App\Http\Controllers\Company\ReportApprovalInboxController;
 use App\Http\Controllers\Company\SupervisorController;
 use App\Http\Controllers\CompanyDashboardController;
 use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DirectMessageController;
+use App\Http\Controllers\DtrSubmissionController;
+use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OjtTaskController;
 use App\Http\Controllers\OjtTermsController;
-use App\Http\Controllers\SupervisorTaskController;
+use App\Http\Controllers\PrivacyExportController;
 use App\Http\Controllers\SupervisorDashboardController;
+use App\Http\Controllers\SupervisorTaskController;
 use App\Http\Middleware\EnsurePasswordChanged;
 use Illuminate\Support\Facades\Route;
 
@@ -62,6 +68,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(EnsurePasswordChanged::class)
         ->name('reports.dtr');
 
+    Route::get('dtr-submissions', [DtrSubmissionController::class, 'index'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('dtr-submissions.index');
+
+    Route::post('dtr-submissions', [DtrSubmissionController::class, 'store'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('dtr-submissions.store');
+
+    Route::patch('dtr-submissions/{dtrSubmission}/review', [DtrSubmissionController::class, 'review'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('dtr-submissions.review');
+
     Route::post('reports/time-in', [DailyReportController::class, 'timeIn'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('reports.time-in');
@@ -85,6 +103,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('reports', [DailyReportController::class, 'index'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('reports.index');
+
+    Route::get('tasks', OjtTaskController::class)
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('tasks.index');
 
     Route::get('managed-ojts', [ManagedOjtController::class, 'index'])
         ->middleware(EnsurePasswordChanged::class)
@@ -118,6 +140,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(EnsurePasswordChanged::class)
         ->name('company.activity-logs.index');
 
+    Route::get('company/operations', [OperationsController::class, 'index'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('company.operations.index');
+
+    Route::post('company/operations/backups', [OperationsController::class, 'backup'])
+        ->middleware(['password.confirm', EnsurePasswordChanged::class])
+        ->name('company.operations.backups.store');
+
+    Route::post('company/operations/backups/{systemBackup}/verify', [OperationsController::class, 'verify'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('company.operations.backups.verify');
+
+    Route::get('privacy/export/{user?}', PrivacyExportController::class)
+        ->middleware(['password.confirm', EnsurePasswordChanged::class])
+        ->name('privacy.export');
+
     Route::get('notifications', [NotificationController::class, 'index'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('notifications.index');
@@ -133,6 +171,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('attendance-corrections', [AttendanceCorrectionController::class, 'index'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('attendance-corrections.index');
+
+    Route::get('leave', [LeaveRequestController::class, 'index'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('leave.index');
+
+    Route::post('leave', [LeaveRequestController::class, 'store'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('leave.store');
+
+    Route::patch('leave/{leaveRequest}/review', [LeaveRequestController::class, 'review'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('leave.review');
+
+    Route::post('company/holidays', [CompanyHolidayController::class, 'store'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('company.holidays.store');
+
+    Route::delete('company/holidays/{companyHoliday}', [CompanyHolidayController::class, 'destroy'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('company.holidays.destroy');
 
     Route::post('reports/{dailyReport}/corrections', [AttendanceCorrectionController::class, 'store'])
         ->middleware(EnsurePasswordChanged::class)
@@ -206,6 +264,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('company/ojts/{ojt}', [OjtController::class, 'destroy'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('company.ojts.destroy');
+
+    Route::post('company/ojts/{ojt}/restore', [OjtController::class, 'restore'])
+        ->middleware(['password.confirm', EnsurePasswordChanged::class])
+        ->whereNumber('ojt')
+        ->name('company.ojts.restore');
 });
 
-require __DIR__ . '/settings.php';
+require __DIR__.'/settings.php';

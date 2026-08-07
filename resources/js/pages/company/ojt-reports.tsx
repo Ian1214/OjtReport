@@ -170,11 +170,21 @@ export default function OjtReports({
                                             />
                                             <Badge
                                                 variant="outline"
-                                                className={report.attendance_status === 'late' ? 'border-amber-500/30 text-amber-700 dark:text-amber-300' : report.attendance_status === 'on_time' ? 'border-emerald-500/30 text-emerald-700 dark:text-emerald-300' : ''}
+                                                className={
+                                                    report.attendance_status ===
+                                                    'late'
+                                                        ? 'border-amber-500/30 text-amber-700 dark:text-amber-300'
+                                                        : report.attendance_status ===
+                                                            'on_time'
+                                                          ? 'border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                                                          : ''
+                                                }
                                             >
-                                                {report.attendance_status === 'late'
+                                                {report.attendance_status ===
+                                                'late'
                                                     ? `Late · ${report.late_minutes ?? 0} min`
-                                                    : report.attendance_status === 'on_time'
+                                                    : report.attendance_status ===
+                                                        'on_time'
                                                       ? 'On time'
                                                       : 'Not classified'}
                                             </Badge>
@@ -219,7 +229,15 @@ export default function OjtReports({
                                         />
                                         <ReportDetail
                                             label="Arrival Status"
-                                            value={report.attendance_status === 'late' ? `Late (${report.late_minutes ?? 0} minutes)` : report.attendance_status === 'on_time' ? 'On time' : 'Not classified'}
+                                            value={
+                                                report.attendance_status ===
+                                                'late'
+                                                    ? `Late (${report.late_minutes ?? 0} minutes)`
+                                                    : report.attendance_status ===
+                                                        'on_time'
+                                                      ? 'On time'
+                                                      : 'Not classified'
+                                            }
                                         />
                                         <ReportDetail
                                             label="Total Hours"

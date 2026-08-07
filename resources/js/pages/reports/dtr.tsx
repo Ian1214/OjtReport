@@ -114,9 +114,11 @@ export default function Dtr({ reports, totalHours }: Props) {
                                                 {formatTime(report.time_out)}
                                             </td>
                                             <td className="px-3 py-3">
-                                                {report.attendance_status === 'late'
+                                                {report.attendance_status ===
+                                                'late'
                                                     ? `Late (${report.late_minutes ?? 0} min)`
-                                                    : report.attendance_status === 'on_time'
+                                                    : report.attendance_status ===
+                                                        'on_time'
                                                       ? 'On time'
                                                       : '—'}
                                             </td>

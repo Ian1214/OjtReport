@@ -45,6 +45,11 @@ class OjtTermsController extends Controller
             );
         }
 
-        return to_route('dashboard')->with('success', 'Terms accepted. Welcome to your OJT dashboard.');
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Terms accepted. Welcome to your OJT dashboard.',
+        ]);
+
+        return to_route('dashboard');
     }
 }

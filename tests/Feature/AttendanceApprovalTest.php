@@ -31,7 +31,8 @@ test('a company administrator can approve pending hours and complete the OJT', f
 
     $this->actingAs($admin)
         ->patch(route('company.reports.approve', $report))
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'success');
 
     expect($report->refresh())
         ->approval_status->toBe(DailyReport::STATUS_APPROVED)
@@ -57,7 +58,8 @@ test('a company administrator can reject a report with a correction reason', fun
         ->patch(route('company.reports.reject', $report), [
             'rejection_reason' => 'Please provide a more detailed work summary.',
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'warning');
 
     expect($report->refresh())
         ->approval_status->toBe(DailyReport::STATUS_REJECTED)

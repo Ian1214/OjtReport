@@ -9,9 +9,9 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DirectMessageController extends Controller
 {
@@ -65,6 +65,9 @@ class DirectMessageController extends Controller
                 'role' => $participant->role,
                 'position' => $participant->position,
                 'department' => $participant->department,
+                'isOnline' => $participant->isOnline(),
+                'lastSeenAt' => $participant->last_seen_at?->toIso8601String(),
+                'unreadCount' => 0,
             ],
             'messages' => $messages->map(fn (DirectMessage $message): array => [
                 'id' => $message->id,
@@ -75,6 +78,7 @@ class DirectMessageController extends Controller
                 'isMine' => $message->sender_id === $user->id,
                 'canEdit' => $message->sender_id === $user->id
                     && $message->created_at?->greaterThanOrEqualTo(now()->subMinutes(10)),
+                'isRead' => $message->read_at !== null,
                 'editedAt' => $message->edited_at?->toIso8601String(),
                 'sentAt' => $message->created_at?->toIso8601String(),
             ]),
@@ -146,13 +150,21 @@ class DirectMessageController extends Controller
     }
 
     /**
-     * @return array<int, array{id: int, name: string, role: string, position: string|null, department: string|null}>
+     * @return array<int, array{id: int, name: string, role: string, position: string|null, department: string|null, isOnline: bool, lastSeenAt: string|null, unreadCount: int}>
      */
     private function contactsFor(User $user): array
     {
         $contacts = $user->isSupervisor()
             ? $user->assignedOjts()->orderBy('name')->get()
             : collect([$user->assignedSupervisor])->filter();
+
+        $unreadCounts = DirectMessage::query()
+            ->where('recipient_id', $user->id)
+            ->whereNull('read_at')
+            ->whereIn('sender_id', $contacts->pluck('id'))
+            ->selectRaw('sender_id, count(*) as unread_count')
+            ->groupBy('sender_id')
+            ->pluck('unread_count', 'sender_id');
 
         return $contacts
             ->map(fn (User $contact): array => [
@@ -161,6 +173,9 @@ class DirectMessageController extends Controller
                 'role' => $contact->role,
                 'position' => $contact->position,
                 'department' => $contact->department,
+                'isOnline' => $contact->isOnline(),
+                'lastSeenAt' => $contact->last_seen_at?->toIso8601String(),
+                'unreadCount' => (int) ($unreadCounts[$contact->id] ?? 0),
             ])
             ->values()
             ->all();

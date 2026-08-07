@@ -1,15 +1,23 @@
 import { usePasskeyRegister } from '@laravel/passkeys/react';
+import { ExternalLink, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { edit as securitySettings } from '@/routes/security';
 
 type Props = {
     onSuccess: () => void;
+    passkeyOrigin?: string;
+    passkeyRelyingPartyId?: string;
 };
 
-export default function PasskeyRegistration({ onSuccess }: Props) {
+export default function PasskeyRegistration({
+    onSuccess,
+    passkeyOrigin,
+    passkeyRelyingPartyId,
+}: Props) {
     const [name, setName] = useState(() => {
         const ua = navigator.userAgent;
 
@@ -56,6 +64,79 @@ export default function PasskeyRegistration({ onSuccess }: Props) {
         setName('');
     };
 
+    const currentOrigin = window.location.origin;
+    const currentHostname = window.location.hostname;
+    const hasOriginMismatch = Boolean(
+        passkeyOrigin && currentOrigin !== passkeyOrigin,
+    );
+    const hasRelyingPartyMismatch = Boolean(
+        passkeyRelyingPartyId &&
+        currentHostname !== passkeyRelyingPartyId &&
+        !currentHostname.endsWith(`.${passkeyRelyingPartyId}`),
+    );
+    const isEmbeddedBrowser = /FB_IAB|Instagram|; wv\)/i.test(
+        navigator.userAgent,
+    );
+    const configuredSecurityUrl = passkeyOrigin
+        ? new URL(securitySettings.url(), passkeyOrigin).toString()
+        : null;
+    const normalizedError = error?.toLowerCase() ?? '';
+    const displayError =
+        normalizedError.includes('cancel') ||
+        normalizedError.includes('notallowederror')
+            ? 'The phone cancelled or blocked the passkey prompt. Open this page in Chrome or Safari, make sure screen lock is enabled, and keep the prompt open until it completes.'
+            : error;
+
+    if (hasOriginMismatch || hasRelyingPartyMismatch) {
+        return (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
+                <div className="flex items-start gap-3">
+                    <TriangleAlert className="mt-0.5 size-5 shrink-0" />
+                    <div className="space-y-2">
+                        <p className="font-medium">
+                            Open the configured address to use passkeys
+                        </p>
+                        <p className="text-amber-700 dark:text-amber-300">
+                            This page is open at {currentOrigin}, but passkeys
+                            are configured for {passkeyOrigin}. WebAuthn blocks
+                            registration when these addresses differ.
+                        </p>
+                        {configuredSecurityUrl && (
+                            <a
+                                href={configuredSecurityUrl}
+                                className="inline-flex max-w-full items-center gap-2 font-medium underline underline-offset-4"
+                            >
+                                <span className="break-all">
+                                    Open the correct security page
+                                </span>
+                                <ExternalLink className="size-4 shrink-0" />
+                            </a>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (isEmbeddedBrowser) {
+        return (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
+                <div className="flex items-start gap-3">
+                    <TriangleAlert className="mt-0.5 size-5 shrink-0" />
+                    <div className="space-y-1">
+                        <p className="font-medium">
+                            Open this page in Chrome or Safari
+                        </p>
+                        <p className="text-amber-700 dark:text-amber-300">
+                            Passkey setup is not reliable inside Facebook,
+                            Messenger, Instagram, or another in-app browser.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (!isSupported) {
         return (
             <div className="text-sm text-muted-foreground">
@@ -93,7 +174,7 @@ export default function PasskeyRegistration({ onSuccess }: Props) {
                 </p>
             </div>
 
-            {error && <InputError message={error} />}
+            {displayError && <InputError message={displayError} />}
 
             <div className="flex gap-2">
                 <Button type="submit" disabled={isLoading || !name.trim()}>

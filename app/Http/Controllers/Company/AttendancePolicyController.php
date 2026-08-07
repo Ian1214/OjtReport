@@ -27,6 +27,8 @@ class AttendancePolicyController extends Controller
                 'name' => $company->name,
                 'workStartTime' => substr($company->work_start_time, 0, 5),
                 'lateGraceMinutes' => $company->late_grace_minutes,
+                'timezone' => $company->timezone,
+                'workDays' => $company->work_days ?? [1, 2, 3, 4, 5],
             ],
         ]);
     }
@@ -40,6 +42,11 @@ class AttendancePolicyController extends Controller
 
         $company->update($request->validated());
 
-        return back()->with('success', 'Attendance policy updated. New time-ins will use this schedule.');
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Attendance policy updated. New time-ins will use this schedule.',
+        ]);
+
+        return back();
     }
 }

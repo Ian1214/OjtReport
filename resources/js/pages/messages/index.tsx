@@ -1,6 +1,8 @@
 import { Form, Head, Link, usePage, usePoll } from '@inertiajs/react';
 import {
     ArrowLeft,
+    Check,
+    CheckCheck,
     MessageCircle,
     Paperclip,
     Pencil,
@@ -17,6 +19,16 @@ import {
 } from '@/actions/App/Http/Controllers/DirectMessageController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import {
     index as messagesIndex,
@@ -30,6 +42,9 @@ type Contact = {
     role: 'supervisor' | 'ojt';
     position: string | null;
     department: string | null;
+    isOnline: boolean;
+    lastSeenAt: string | null;
+    unreadCount: number;
 };
 
 type Message = {
@@ -38,6 +53,7 @@ type Message = {
     imageUrl: string | null;
     isMine: boolean;
     canEdit: boolean;
+    isRead: boolean;
     editedAt: string | null;
     sentAt: string | null;
 };
@@ -55,7 +71,11 @@ export default function Messages({ contacts, participant, messages }: Props) {
         null,
     );
 
-    usePoll(5000, { only: ['messages'] }, { autoStart: participant !== null });
+    usePoll(
+        10_000,
+        { only: ['messages', 'contacts', 'participant', 'navigation'] },
+        { mode: 'rest' },
+    );
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -102,20 +122,36 @@ export default function Messages({ contacts, participant, messages }: Props) {
                                         href={showMessages(contact.id)}
                                         className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${participant?.id === contact.id ? 'border-primary/30 bg-primary/8' : 'border-transparent hover:border-border hover:bg-muted/50'}`}
                                     >
-                                        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 font-semibold text-primary">
+                                        <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 font-semibold text-primary">
                                             {initials(contact.name)}
+                                            <span
+                                                className={`absolute right-0 bottom-0 size-3 rounded-full border-2 border-card ${contact.isOnline ? 'bg-emerald-500' : 'bg-muted-foreground/45'}`}
+                                                aria-label={
+                                                    contact.isOnline
+                                                        ? 'Online'
+                                                        : 'Offline'
+                                                }
+                                            />
                                         </span>
-                                        <span className="min-w-0">
+                                        <span className="min-w-0 flex-1">
                                             <span className="block truncate text-sm font-semibold">
                                                 {contact.name}
                                             </span>
                                             <span className="block truncate text-xs text-muted-foreground">
+                                                {presenceLabel(contact)} ·{' '}
                                                 {contact.role === 'supervisor'
                                                     ? 'Supervisor'
                                                     : (contact.position ??
                                                       'OJT Intern')}
                                             </span>
                                         </span>
+                                        {contact.unreadCount > 0 && (
+                                            <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">
+                                                {contact.unreadCount > 99
+                                                    ? '99+'
+                                                    : contact.unreadCount}
+                                            </span>
+                                        )}
                                     </Link>
                                 ))
                             )}
@@ -156,14 +192,18 @@ export default function Messages({ contacts, participant, messages }: Props) {
                                             <ArrowLeft />
                                         </Link>
                                     </Button>
-                                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 font-semibold text-primary">
+                                    <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 font-semibold text-primary">
                                         {initials(participant.name)}
+                                        <span
+                                            className={`absolute right-0 bottom-0 size-3 rounded-full border-2 border-card ${participant.isOnline ? 'bg-emerald-500' : 'bg-muted-foreground/45'}`}
+                                        />
                                     </span>
                                     <div className="min-w-0">
                                         <h2 className="truncate font-semibold">
                                             {participant.name}
                                         </h2>
                                         <p className="truncate text-xs text-muted-foreground">
+                                            {presenceLabel(participant)} ·{' '}
                                             {participant.role === 'supervisor'
                                                 ? 'Assigned supervisor'
                                                 : `${participant.position ?? 'OJT Intern'}${participant.department ? ` · ${participant.department}` : ''}`}
@@ -288,6 +328,18 @@ export default function Messages({ contacts, participant, messages }: Props) {
                                                             {message.editedAt &&
                                                                 ' · edited'}
                                                         </time>
+                                                        {message.isMine &&
+                                                            (message.isRead ? (
+                                                                <CheckCheck
+                                                                    className="size-3.5 text-sky-200"
+                                                                    aria-label="Read"
+                                                                />
+                                                            ) : (
+                                                                <Check
+                                                                    className="size-3.5"
+                                                                    aria-label="Sent"
+                                                                />
+                                                            ))}
                                                         {message.isMine && (
                                                             <>
                                                                 {message.canEdit && (
@@ -306,37 +358,11 @@ export default function Messages({ contacts, participant, messages }: Props) {
                                                                         <Pencil className="size-3.5" />
                                                                     </Button>
                                                                 )}
-                                                                <Form
-                                                                    {...destroy.form(
-                                                                        message.id,
-                                                                    )}
-                                                                    onBefore={() =>
-                                                                        window.confirm(
-                                                                            'Delete this message?',
-                                                                        )
+                                                                <DeleteMessageDialog
+                                                                    message={
+                                                                        message
                                                                     }
-                                                                >
-                                                                    {({
-                                                                        processing,
-                                                                    }) => (
-                                                                        <Button
-                                                                            type="submit"
-                                                                            size="icon"
-                                                                            variant="ghost"
-                                                                            className="size-7 text-current opacity-80 hover:bg-white/10 hover:text-current"
-                                                                            disabled={
-                                                                                processing
-                                                                            }
-                                                                            aria-label="Delete message"
-                                                                        >
-                                                                            {processing ? (
-                                                                                <Spinner />
-                                                                            ) : (
-                                                                                <Trash2 className="size-3.5" />
-                                                                            )}
-                                                                        </Button>
-                                                                    )}
-                                                                </Form>
+                                                                />
                                                             </>
                                                         )}
                                                     </div>
@@ -418,6 +444,79 @@ export default function Messages({ contacts, participant, messages }: Props) {
     );
 }
 
+function DeleteMessageDialog({ message }: { message: Message }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="size-7 text-current opacity-80 hover:bg-white/10 hover:text-current"
+                    aria-label="Delete message"
+                >
+                    <Trash2 className="size-3.5" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="overflow-hidden p-0 sm:max-w-md">
+                <DialogHeader className="gap-3 p-6 pb-0 text-left">
+                    <span className="grid size-11 place-items-center rounded-2xl border border-destructive/20 bg-destructive/10 text-destructive shadow-sm">
+                        <Trash2 className="size-5" aria-hidden="true" />
+                    </span>
+                    <div className="grid gap-2">
+                        <DialogTitle>Delete this message?</DialogTitle>
+                        <DialogDescription>
+                            This action cannot be undone. The message
+                            {message.imageUrl
+                                ? ' and its attached image'
+                                : ''}{' '}
+                            will be permanently removed.
+                        </DialogDescription>
+                    </div>
+                </DialogHeader>
+
+                <div className="mx-6 rounded-xl border bg-muted/35 p-3">
+                    <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                        Message preview
+                    </p>
+                    <p className="mt-1.5 line-clamp-3 text-sm break-words text-foreground">
+                        {message.body ?? 'Image attachment'}
+                    </p>
+                </div>
+
+                <Form
+                    {...destroy.form(message.id)}
+                    onSuccess={() => setOpen(false)}
+                >
+                    {({ processing }) => (
+                        <DialogFooter className="border-t bg-muted/25 p-4 sm:px-6">
+                            <DialogClose asChild>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    disabled={processing}
+                                >
+                                    Cancel
+                                </Button>
+                            </DialogClose>
+                            <Button
+                                type="submit"
+                                variant="destructive"
+                                disabled={processing}
+                            >
+                                {processing ? <Spinner /> : <Trash2 />}
+                                {processing ? 'Deleting…' : 'Delete message'}
+                            </Button>
+                        </DialogFooter>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function initials(name: string): string {
     return name
         .split(' ')
@@ -426,6 +525,35 @@ function initials(name: string): string {
         .map((part) => part[0])
         .join('')
         .toUpperCase();
+}
+
+function presenceLabel(contact: Contact): string {
+    if (contact.isOnline) {
+        return 'Online';
+    }
+
+    if (contact.lastSeenAt === null) {
+        return 'Offline';
+    }
+
+    const elapsedMinutes = Math.max(
+        1,
+        Math.floor(
+            (Date.now() - new Date(contact.lastSeenAt).getTime()) / 60_000,
+        ),
+    );
+
+    if (elapsedMinutes < 60) {
+        return `Active ${elapsedMinutes}m ago`;
+    }
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+
+    if (elapsedHours < 24) {
+        return `Active ${elapsedHours}h ago`;
+    }
+
+    return 'Offline';
 }
 
 function formatTime(value: string | null): string {

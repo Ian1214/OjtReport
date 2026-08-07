@@ -4,16 +4,17 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Database\Factories\DailyReportFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Model;
 
 class DailyReport extends Model
 {
-    /** @use HasFactory<\Database\Factories\DailyReportFactory> */
+    /** @use HasFactory<DailyReportFactory> */
     use HasFactory;
 
     public const STATUS_APPROVED = 'approved';
@@ -40,6 +41,7 @@ class DailyReport extends Model
         'reviewed_by',
         'reviewed_at',
         'rejection_reason',
+        'dtr_submission_id',
     ];
 
     protected function casts(): array
@@ -71,6 +73,16 @@ class DailyReport extends Model
     public function latestCorrectionRequest(): HasOne
     {
         return $this->hasOne(AttendanceCorrectionRequest::class)->latestOfMany();
+    }
+
+    public function dtrSubmission(): BelongsTo
+    {
+        return $this->belongsTo(DtrSubmission::class);
+    }
+
+    public function isLocked(): bool
+    {
+        return $this->dtrSubmission?->locked_at !== null;
     }
 
     public function scopeApproved(Builder $query): void

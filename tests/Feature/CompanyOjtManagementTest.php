@@ -29,7 +29,9 @@ test('a company administrator can create an OJT account with a secure password s
         'start_date' => '2026-08-05',
     ]);
 
-    $response->assertRedirect(route('company.ojts.index', absolute: false));
+    $response
+        ->assertRedirect(route('company.ojts.index', absolute: false))
+        ->assertInertiaFlash('toast.type', 'success');
 
     $ojt = User::query()->where('name', 'Maria Santos')->firstOrFail();
 
@@ -52,7 +54,8 @@ test('a company administrator can assign a supervisor to an OJT', function () {
 
     $this->actingAs($companyAdmin)
         ->patch(route('company.ojts.update-supervisor', $ojt), ['supervisor_name' => 'Maria Cruz'])
-        ->assertRedirect(route('company.ojts.index', absolute: false));
+        ->assertRedirect(route('company.ojts.index', absolute: false))
+        ->assertInertiaFlash('toast.type', 'success');
 
     expect($ojt->refresh()->supervisor_name)->toBe('Maria Cruz');
 });
@@ -73,7 +76,8 @@ test('a company administrator can resend an OJT password setup link', function (
 
     $this->actingAs($companyAdmin)
         ->post(route('company.ojts.resend-setup-link', $ojt))
-        ->assertRedirect(route('company.ojts.index', absolute: false));
+        ->assertRedirect(route('company.ojts.index', absolute: false))
+        ->assertInertiaFlash('toast.type', 'success');
 
     Notification::assertSentTo($ojt, OjtAccountCreated::class);
 });
@@ -199,7 +203,7 @@ test('an OJT must change the temporary password before accessing reports', funct
         ->assertRedirect(route('security.edit', absolute: false));
 });
 
-test('a company administrator can delete one of their OJT accounts', function () {
+test('a company administrator can archive and restore one of their OJT accounts', function () {
     $company = Company::factory()->create();
     $companyAdmin = User::factory()->create([
         'company_id' => $company->id,
@@ -213,9 +217,15 @@ test('a company administrator can delete one of their OJT accounts', function ()
 
     $this->actingAs($companyAdmin)
         ->delete(route('company.ojts.destroy', $ojt))
-        ->assertRedirect(route('company.ojts.index', absolute: false));
+        ->assertRedirect(route('company.ojts.index', absolute: false))
+        ->assertInertiaFlash('toast.type', 'success');
 
-    $this->assertModelMissing($ojt);
+    $this->assertSoftDeleted($ojt);
+
+    $this->actingAs($companyAdmin);
+    session(['auth.password_confirmed_at' => time()]);
+    $this->post(route('company.ojts.restore', $ojt->id))->assertRedirect();
+    $this->assertNotSoftDeleted($ojt);
 });
 
 test('a company administrator cannot delete an OJT from another company', function () {

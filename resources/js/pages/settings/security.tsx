@@ -31,7 +31,8 @@ export default function Security(props: Props) {
             <div className="space-y-6">
                 {props.mustChangePassword && (
                     <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
-                        Your company issued a temporary password. Create your own password to continue.
+                        Your company issued a temporary password. Create your
+                        own password to continue.
                     </div>
                 )}
                 <Heading
@@ -137,6 +138,8 @@ export default function Security(props: Props) {
 
             <ManagePasskeys
                 canManagePasskeys={props.canManagePasskeys}
+                passkeyOrigin={props.passkeyOrigin}
+                passkeyRelyingPartyId={props.passkeyRelyingPartyId}
                 passkeys={props.passkeys}
             />
         </>

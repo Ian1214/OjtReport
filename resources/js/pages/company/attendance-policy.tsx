@@ -15,6 +15,8 @@ type Props = {
         name: string;
         workStartTime: string;
         lateGraceMinutes: number;
+        timezone: string;
+        workDays: number[];
     };
 };
 
@@ -37,9 +39,13 @@ export default function AttendancePolicy({ company }: Props) {
                                 <Clock8 className="size-5" />
                             </div>
                             <div>
-                                <h2 className="font-semibold">Official time in</h2>
+                                <h2 className="font-semibold">
+                                    Official time in
+                                </h2>
                                 <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                    The server records attendance in Philippine time. A grace period keeps arrivals within the allowed window marked On time.
+                                    The server records attendance in Philippine
+                                    time. A grace period keeps arrivals within
+                                    the allowed window marked On time.
                                 </p>
                             </div>
                         </div>
@@ -49,25 +55,126 @@ export default function AttendancePolicy({ company }: Props) {
                                 <>
                                     <div className="grid gap-5 sm:grid-cols-2">
                                         <div className="grid gap-2">
-                                            <Label htmlFor="work_start_time">Required arrival time</Label>
-                                            <Input id="work_start_time" name="work_start_time" type="time" required defaultValue={company.workStartTime} />
-                                            <InputError message={errors.work_start_time} />
+                                            <Label htmlFor="work_start_time">
+                                                Required arrival time
+                                            </Label>
+                                            <Input
+                                                id="work_start_time"
+                                                name="work_start_time"
+                                                type="time"
+                                                required
+                                                defaultValue={
+                                                    company.workStartTime
+                                                }
+                                            />
+                                            <InputError
+                                                message={errors.work_start_time}
+                                            />
                                         </div>
                                         <div className="grid gap-2">
-                                            <Label htmlFor="late_grace_minutes">Grace period (minutes)</Label>
-                                            <Input id="late_grace_minutes" name="late_grace_minutes" type="number" min="0" max="120" required defaultValue={company.lateGraceMinutes} />
-                                            <InputError message={errors.late_grace_minutes} />
+                                            <Label htmlFor="late_grace_minutes">
+                                                Grace period (minutes)
+                                            </Label>
+                                            <Input
+                                                id="late_grace_minutes"
+                                                name="late_grace_minutes"
+                                                type="number"
+                                                min="0"
+                                                max="120"
+                                                required
+                                                defaultValue={
+                                                    company.lateGraceMinutes
+                                                }
+                                            />
+                                            <InputError
+                                                message={
+                                                    errors.late_grace_minutes
+                                                }
+                                            />
                                         </div>
                                     </div>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="timezone">
+                                                Attendance timezone
+                                            </Label>
+                                            <select
+                                                id="timezone"
+                                                name="timezone"
+                                                defaultValue={company.timezone}
+                                                className="h-10 rounded-md border bg-background px-3 text-sm"
+                                            >
+                                                <option value="Asia/Manila">
+                                                    Philippines (Asia/Manila)
+                                                </option>
+                                                <option value="Asia/Singapore">
+                                                    Singapore (Asia/Singapore)
+                                                </option>
+                                                <option value="UTC">UTC</option>
+                                            </select>
+                                            <InputError
+                                                message={errors.timezone}
+                                            />
+                                        </div>
+                                        <fieldset className="grid gap-2">
+                                            <legend className="text-sm font-medium">
+                                                Scheduled work days
+                                            </legend>
+                                            <div className="flex flex-wrap gap-2">
+                                                {[
+                                                    'Mon',
+                                                    'Tue',
+                                                    'Wed',
+                                                    'Thu',
+                                                    'Fri',
+                                                    'Sat',
+                                                    'Sun',
+                                                ].map((day, index) => (
+                                                    <label
+                                                        key={day}
+                                                        className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            name="work_days[]"
+                                                            value={index + 1}
+                                                            defaultChecked={company.workDays.includes(
+                                                                index + 1,
+                                                            )}
+                                                        />
+                                                        {day}
+                                                    </label>
+                                                ))}
+                                            </div>
+                                            <InputError
+                                                message={errors.work_days}
+                                            />
+                                        </fieldset>
+                                    </div>
                                     <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm leading-6 text-muted-foreground">
-                                        Example: with an 8:00 AM start and 10-minute grace period, 8:10 AM is On time and 8:11 AM is Late. Existing records keep their original schedule snapshot.
+                                        Example: with an 8:00 AM start and
+                                        10-minute grace period, 8:10 AM is On
+                                        time and 8:11 AM is Late. Existing
+                                        records keep their original schedule
+                                        snapshot.
                                     </div>
                                     <div className="flex flex-wrap items-center gap-3">
-                                        <Button type="submit" disabled={processing}>
-                                            {processing ? <Spinner /> : <ShieldCheck />}
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            {processing ? (
+                                                <Spinner />
+                                            ) : (
+                                                <ShieldCheck />
+                                            )}
                                             Save attendance policy
                                         </Button>
-                                        {recentlySuccessful && <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Policy saved</span>}
+                                        {recentlySuccessful && (
+                                            <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                                                Policy saved
+                                            </span>
+                                        )}
                                     </div>
                                 </>
                             )}
@@ -78,14 +185,35 @@ export default function AttendancePolicy({ company }: Props) {
                         <Scale className="size-6 text-primary" />
                         <h2 className="mt-4 font-semibold">Company rules</h2>
                         <ul className="mt-3 grid gap-3 text-sm leading-6 text-muted-foreground">
-                            <li>• Arrive ready to work by the official time in.</li>
-                            <li>• Use Time in only when physically present and ready to begin.</li>
-                            <li>• Never ask another person to record attendance for you.</li>
-                            <li>• Submit an accurate daily summary after timing out.</li>
-                            <li>• Protect company and fellow interns&apos; confidential information.</li>
-                            <li>• Follow safety instructions and maintain a respectful workplace.</li>
+                            <li>
+                                • Arrive ready to work by the official time in.
+                            </li>
+                            <li>
+                                • Use Time in only when physically present and
+                                ready to begin.
+                            </li>
+                            <li>
+                                • Never ask another person to record attendance
+                                for you.
+                            </li>
+                            <li>
+                                • Submit an accurate daily summary after timing
+                                out.
+                            </li>
+                            <li>
+                                • Protect company and fellow interns&apos;
+                                confidential information.
+                            </li>
+                            <li>
+                                • Follow safety instructions and maintain a
+                                respectful workplace.
+                            </li>
                         </ul>
-                        <Button variant="outline" className="mt-6 w-full" asChild>
+                        <Button
+                            variant="outline"
+                            className="mt-6 w-full"
+                            asChild
+                        >
                             <Link href={terms()}>
                                 Read complete terms
                                 <ExternalLink />

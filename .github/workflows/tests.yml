@@ -36,3 +36,9 @@ jobs:
 
       - name: Run CI Checks
         run: composer ci:check
+
+      - name: Audit PHP dependencies
+        run: composer audit --locked
+
+      - name: Audit JavaScript dependencies
+        run: npm audit --audit-level=high

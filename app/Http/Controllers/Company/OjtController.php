@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCompanyOjtRequest;
 use App\Http\Requests\UpdateOjtSupervisorRequest;
 use App\Models\User;
-use App\Notifications\OjtAccountCreated;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +14,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class OjtController extends Controller
 {
@@ -32,6 +32,7 @@ class OjtController extends Controller
 
         $ojt = DB::transaction(function () use ($company, $request, $initialPassword, $supervisor): User {
             $studentId = $this->nextStudentId();
+
             return $company->ojts()->create([
                 ...$request->validated(),
                 'supervisor_id' => $supervisor?->id,
@@ -52,6 +53,11 @@ class OjtController extends Controller
             "{$companyAdmin->name} created the OJT account for {$ojt->name}.",
             $ojt,
         );
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "{$ojt->name}'s account was created and the setup email was queued.",
+        ]);
 
         return to_route('company.ojts.index')->with('createdAccount', [
             'name' => $ojt->name,
@@ -77,7 +83,12 @@ class OjtController extends Controller
             $ojt,
         );
 
-        return to_route('company.ojts.index')->with('status', "A new setup link has been queued for {$ojt->email}.");
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "A new setup link has been queued for {$ojt->email}.",
+        ]);
+
+        return to_route('company.ojts.index');
     }
 
     public function updateSupervisor(UpdateOjtSupervisorRequest $request, User $ojt): RedirectResponse
@@ -104,7 +115,12 @@ class OjtController extends Controller
             ]);
         }
 
-        return to_route('company.ojts.index')->with('status', "Supervisor assigned to {$ojt->name}.");
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "Supervisor assigned to {$ojt->name}.",
+        ]);
+
+        return to_route('company.ojts.index');
     }
 
     public function destroy(Request $request, User $ojt, RecordActivity $recordActivity): RedirectResponse
@@ -119,14 +135,37 @@ class OjtController extends Controller
 
         $recordActivity->handle(
             $companyAdmin,
-            'account.ojt_deleted',
-            "{$companyAdmin->name} deleted the OJT account for {$ojt->name}.",
+            'account.ojt_archived',
+            "{$companyAdmin->name} archived the OJT account for {$ojt->name}.",
             $ojt,
             ['deleted_user_name' => $ojt->name, 'deleted_user_email' => $ojt->email],
         );
         $ojt->delete();
 
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "{$ojt->name}'s OJT account was archived. Its audit records remain protected by the retention policy.",
+        ]);
+
         return to_route('company.ojts.index');
+    }
+
+    public function restore(Request $request, int $ojt, RecordActivity $recordActivity): RedirectResponse
+    {
+        /** @var User $companyAdmin */
+        $companyAdmin = $request->user();
+        Gate::authorize('delete', $companyAdmin->companyRecord);
+
+        $archivedOjt = User::onlyTrashed()
+            ->whereKey($ojt)
+            ->where('company_id', $companyAdmin->company_id)
+            ->where('role', 'ojt')
+            ->firstOrFail();
+        $archivedOjt->restore();
+        $recordActivity->handle($companyAdmin, 'account.ojt_restored', "{$companyAdmin->name} restored the OJT account for {$archivedOjt->name}.", $archivedOjt);
+        Inertia::flash('toast', ['type' => 'success', 'message' => "{$archivedOjt->name}'s account was restored."]);
+
+        return back();
     }
 
     private function nextStudentId(): string

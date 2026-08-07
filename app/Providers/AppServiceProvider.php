@@ -2,9 +2,15 @@
 
 namespace App\Providers;
 
+use App\Listeners\EnsureApplicationHealth;
+use App\Listeners\RecordAuthenticationActivity;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Logout;
+use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -24,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        Event::listen(DiagnosingHealth::class, EnsureApplicationHealth::class);
+        Event::listen(Failed::class, RecordAuthenticationActivity::class);
+        Event::listen(Logout::class, RecordAuthenticationActivity::class);
     }
 
     /**

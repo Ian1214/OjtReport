@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateAttendancePolicyRequest extends FormRequest
 {
@@ -25,6 +26,9 @@ class UpdateAttendancePolicyRequest extends FormRequest
         return [
             'work_start_time' => ['required', 'date_format:H:i'],
             'late_grace_minutes' => ['required', 'integer', 'min:0', 'max:120'],
+            'timezone' => ['required', Rule::in(['Asia/Manila', 'Asia/Singapore', 'UTC'])],
+            'work_days' => ['required', 'array', 'min:1'],
+            'work_days.*' => ['required', 'integer', 'between:1,7', 'distinct'],
         ];
     }
 

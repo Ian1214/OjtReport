@@ -93,6 +93,12 @@ class AttendanceCorrectionController extends Controller
         $correction = DB::transaction(function () use ($request, $dailyReport, $ojt): AttendanceCorrectionRequest {
             $lockedReport = DailyReport::query()->lockForUpdate()->findOrFail($dailyReport->id);
 
+            if ($lockedReport->loadMissing('dtrSubmission')->isLocked()) {
+                throw ValidationException::withMessages([
+                    'attendance' => 'This attendance record belongs to a finalized DTR and can no longer be changed.',
+                ]);
+            }
+
             if ($lockedReport->correctionRequests()
                 ->whereIn('status', [
                     AttendanceCorrectionRequest::STATUS_PENDING_SUPERVISOR,
@@ -133,7 +139,9 @@ class AttendanceCorrectionController extends Controller
             ['report_date' => $dailyReport->report_date->toDateString()],
         );
 
-        return back()->with('success', 'Attendance correction request submitted.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Attendance correction request submitted.']);
+
+        return back();
     }
 
     public function supervisorReview(
@@ -176,15 +184,19 @@ class AttendanceCorrectionController extends Controller
             $correction,
         );
 
-        return back()->with('success', 'Correction forwarded for final administrator review.');
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Correction forwarded for final administrator review.',
+        ]);
+
+        return back();
     }
 
     public function approve(
         Request $request,
         AttendanceCorrectionRequest $attendanceCorrection,
         RecordActivity $recordActivity,
-    ): RedirectResponse
-    {
+    ): RedirectResponse {
         /** @var User $admin */
         $admin = $request->user();
         $this->authorizeAdmin($admin, $attendanceCorrection);
@@ -194,6 +206,11 @@ class AttendanceCorrectionController extends Controller
             $locked = AttendanceCorrectionRequest::query()->lockForUpdate()->findOrFail($attendanceCorrection->id);
             $this->ensureStatus($locked, AttendanceCorrectionRequest::STATUS_PENDING_ADMIN);
             $report = DailyReport::query()->lockForUpdate()->findOrFail($locked->daily_report_id);
+            if ($report->loadMissing('dtrSubmission')->isLocked()) {
+                throw ValidationException::withMessages([
+                    'decision' => 'This DTR was finalized before the correction could be applied.',
+                ]);
+            }
             $timeIn = $locked->proposed_time_in ?? $report->time_in;
             $timeOut = $locked->proposed_time_out ?? $report->time_out;
             $scheduledTimeIn = Carbon::createFromFormat(
@@ -234,7 +251,12 @@ class AttendanceCorrectionController extends Controller
             $correction,
         );
 
-        return back()->with('success', 'Attendance correction approved and hours recalculated.');
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Attendance correction approved and hours recalculated.',
+        ]);
+
+        return back();
     }
 
     public function reject(
@@ -267,7 +289,12 @@ class AttendanceCorrectionController extends Controller
             $correction,
         );
 
-        return back()->with('success', 'Attendance correction rejected. Original attendance was preserved.');
+        Inertia::flash('toast', [
+            'type' => 'warning',
+            'message' => 'Attendance correction rejected. Original attendance was preserved.',
+        ]);
+
+        return back();
     }
 
     private function authorizeAdmin(User $admin, AttendanceCorrectionRequest $correction): void

@@ -26,7 +26,8 @@ test('a company administrator can create a supervisor account and assign it to a
             'name' => 'Maria Supervisor',
             'email' => 'maria.supervisor@example.test',
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'success');
 
     $supervisor = User::query()->where('email', 'maria.supervisor@example.test')->firstOrFail();
 
@@ -55,7 +56,8 @@ test('a supervisor can manage tasks only for assigned OJTs', function () {
             'description' => 'Include the testing summary.',
             'due_date' => '2026-08-10',
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'success');
 
     $task = OjtTask::query()->where('ojt_id', $assignedOjt->id)->firstOrFail();
 
@@ -76,7 +78,8 @@ test('an OJT can update only their own assigned task status', function () {
 
     $this->actingAs($ojt)
         ->patch(route('tasks.update-status', $task), ['status' => 'ongoing'])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'success');
 
     expect($task->refresh()->status)->toBe('ongoing');
 
@@ -88,8 +91,16 @@ test('an OJT can update only their own assigned task status', function () {
 test('a supervisor dashboard only includes OJTs assigned to that supervisor', function () {
     $company = Company::factory()->create();
     $supervisor = User::factory()->create(['company_id' => $company->id, 'role' => 'supervisor']);
-    $assignedOjt = User::factory()->create(['company_id' => $company->id, 'supervisor_id' => $supervisor->id]);
+    $assignedOjt = User::factory()->create([
+        'company_id' => $company->id,
+        'supervisor_id' => $supervisor->id,
+        'last_seen_at' => now(),
+    ]);
     User::factory()->create(['company_id' => $company->id]);
+    DirectMessage::factory()->create([
+        'sender_id' => $assignedOjt->id,
+        'recipient_id' => $supervisor->id,
+    ]);
 
     $this->actingAs($supervisor)
         ->get(route('supervisor.dashboard'))
@@ -97,7 +108,9 @@ test('a supervisor dashboard only includes OJTs assigned to that supervisor', fu
         ->assertInertia(fn (Assert $page) => $page
             ->component('supervisor/dashboard')
             ->has('ojts', 1)
-            ->where('ojts.0.id', $assignedOjt->id));
+            ->where('ojts.0.id', $assignedOjt->id)
+            ->where('ojts.0.isOnline', true)
+            ->where('ojts.0.unreadCount', 1));
 });
 
 test('an assigned supervisor and OJT can privately message each other', function () {
@@ -122,6 +135,15 @@ test('an assigned supervisor and OJT can privately message each other', function
         ->and($message->body)->toBe('Please review your assigned task.');
 
     $this->actingAs($ojt)
+        ->get(route('messages.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('contacts.0.id', $supervisor->id)
+            ->where('contacts.0.isOnline', true)
+            ->where('contacts.0.unreadCount', 1)
+            ->where('navigation.unreadMessagesCount', 1));
+
+    $this->actingAs($ojt)
         ->get(route('messages.show', $supervisor))
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
@@ -129,9 +151,18 @@ test('an assigned supervisor and OJT can privately message each other', function
             ->where('participant.id', $supervisor->id)
             ->has('messages', 1)
             ->where('messages.0.body', $message->body)
-            ->where('messages.0.isMine', false));
+            ->where('messages.0.isMine', false)
+            ->where('participant.isOnline', true));
 
     expect($message->refresh()->read_at)->not->toBeNull();
+
+    $this->actingAs($supervisor)
+        ->get(route('messages.show', $ojt))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('messages.0.isMine', true)
+            ->where('messages.0.isRead', true)
+            ->where('navigation.unreadMessagesCount', 0));
 });
 
 test('users cannot open or send messages outside their assigned conversation', function () {

@@ -7,10 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSupervisorRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class SupervisorController extends Controller
 {
@@ -54,6 +54,11 @@ class SupervisorController extends Controller
             $supervisor,
         );
 
-        return back()->with('status', "Supervisor setup email queued for {$supervisor->email}.");
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "Supervisor setup email queued for {$supervisor->email}.",
+        ]);
+
+        return back();
     }
 }

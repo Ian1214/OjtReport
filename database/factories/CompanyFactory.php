@@ -21,6 +21,8 @@ class CompanyFactory extends Factory
             'name' => fake()->company(),
             'work_start_time' => '08:00:00',
             'late_grace_minutes' => 0,
+            'timezone' => 'Asia/Manila',
+            'work_days' => [1, 2, 3, 4, 5],
         ];
     }
 }

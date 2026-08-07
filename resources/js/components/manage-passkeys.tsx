@@ -8,6 +8,8 @@ import type { Passkey } from '@/types/auth';
 
 export type Props = {
     canManagePasskeys?: boolean;
+    passkeyOrigin?: string;
+    passkeyRelyingPartyId?: string;
     passkeys?: Passkey[];
 };
 
@@ -65,7 +67,11 @@ export default function ManagePasskeys(props: Props) {
                 )}
             </div>
 
-            <PasskeyRegistration onSuccess={handleRegisterSuccess} />
+            <PasskeyRegistration
+                onSuccess={handleRegisterSuccess}
+                passkeyOrigin={props.passkeyOrigin}
+                passkeyRelyingPartyId={props.passkeyRelyingPartyId}
+            />
         </div>
     );
 }

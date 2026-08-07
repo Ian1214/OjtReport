@@ -2,8 +2,9 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\DailyReport;
 use App\Models\AttendanceCorrectionRequest;
+use App\Models\DailyReport;
+use App\Models\DirectMessage;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -59,6 +60,12 @@ class HandleInertiaRequests extends Middleware
                         ->count()
                     : 0,
                 'unreadNotificationsCount' => fn (): int => $user?->unreadNotifications()->count() ?? 0,
+                'unreadMessagesCount' => fn (): int => $user === null || $user->isCompanyAdmin()
+                    ? 0
+                    : DirectMessage::query()
+                        ->where('recipient_id', $user->id)
+                        ->whereNull('read_at')
+                        ->count(),
                 'pendingCorrectionsCount' => fn (): int => match ($user?->role) {
                     'ojt' => AttendanceCorrectionRequest::query()
                         ->where('requested_by', $user->id)

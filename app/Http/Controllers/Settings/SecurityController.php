@@ -22,6 +22,8 @@ class SecurityController extends Controller
             'mustChangePassword' => $request->user()->must_change_password,
             'canManageTwoFactor' => Features::canManageTwoFactorAuthentication(),
             'canManagePasskeys' => Features::canManagePasskeys(),
+            'passkeyOrigin' => config('fortify.passkeys.allowed_origins.0'),
+            'passkeyRelyingPartyId' => config('fortify.passkeys.relying_party_id'),
             'passkeys' => Features::canManagePasskeys()
                 ? $request->user()
                     ->passkeys()

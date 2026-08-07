@@ -47,7 +47,8 @@ test('an OJT can request a correction without changing approved attendance', fun
             'proposed_time_in' => '08:30',
             'reason' => 'The original time was recorded before I arrived.',
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'success');
 
     $correction = AttendanceCorrectionRequest::query()->firstOrFail();
     expect($correction)
@@ -81,7 +82,8 @@ test('the assigned supervisor reviews and forwards a correction to the administr
         ->patch(route('attendance-corrections.supervisor-review', $correction), [
             'supervisor_comment' => 'I verified the corrected arrival time with the attendance log.',
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'success');
 
     expect($correction->refresh())
         ->status->toBe(AttendanceCorrectionRequest::STATUS_PENDING_ADMIN)
@@ -105,7 +107,8 @@ test('final approval updates the report recalculates hours and preserves the aud
 
     $this->actingAs($admin)
         ->patch(route('attendance-corrections.approve', $correction))
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'success');
 
     expect($report->refresh())
         ->time_in->toBe('09:00:00')
@@ -143,7 +146,8 @@ test('rejection preserves original attendance and other companies cannot finaliz
         ->patch(route('attendance-corrections.reject', $correction), [
             'admin_comment' => 'The attendance log confirms the original recorded time.',
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'warning');
 
     expect($correction->refresh())
         ->status->toBe(AttendanceCorrectionRequest::STATUS_REJECTED)

@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class DailyReportReviewController extends Controller
 {
@@ -53,7 +54,12 @@ class DailyReportReviewController extends Controller
             $dailyReport,
         );
 
-        return back()->with('success', 'Daily report approved. Its hours now count toward completion.');
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Daily report approved. Its hours now count toward completion.',
+        ]);
+
+        return back();
     }
 
     public function reject(
@@ -100,7 +106,12 @@ class DailyReportReviewController extends Controller
             $dailyReport,
         );
 
-        return back()->with('success', 'Daily report returned to the OJT for correction.');
+        Inertia::flash('toast', [
+            'type' => 'warning',
+            'message' => 'Daily report returned to the OJT for correction.',
+        ]);
+
+        return back();
     }
 
     private function authorizeCompanyReport(User $companyAdmin, DailyReport $dailyReport): void

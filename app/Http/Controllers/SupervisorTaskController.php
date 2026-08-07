@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateOjtTaskStatusRequest;
 use App\Models\OjtTask;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Inertia\Inertia;
 
 class SupervisorTaskController extends Controller
 {
@@ -22,7 +23,9 @@ class SupervisorTaskController extends Controller
             'ojt_id' => $ojt->id,
         ]);
 
-        return back()->with('status', 'Task assigned successfully.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Task assigned successfully.']);
+
+        return back();
     }
 
     public function updateStatus(UpdateOjtTaskStatusRequest $request, OjtTask $ojtTask): RedirectResponse
@@ -31,6 +34,8 @@ class SupervisorTaskController extends Controller
 
         $ojtTask->update($request->validated());
 
-        return back()->with('status', 'Task status updated.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Task status updated.']);
+
+        return back();
     }
 }

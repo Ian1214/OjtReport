@@ -3,7 +3,9 @@
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Laravel\Fortify\Features;
+use PragmaRX\Google2FA\Google2FA;
 
 test('security page is displayed', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
@@ -24,10 +26,24 @@ test('security page is displayed', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('settings/security')
             ->where('canManagePasskeys', true)
+            ->where('passkeyOrigin', config('fortify.passkeys.allowed_origins.0'))
+            ->where('passkeyRelyingPartyId', config('fortify.passkeys.relying_party_id'))
             ->where('passkeys', [])
             ->where('canManageTwoFactor', true)
             ->where('twoFactorEnabled', false),
         );
+});
+
+test('two factor authentication tolerates one adjacent time interval', function () {
+    $authenticator = new Google2FA;
+    $secret = $authenticator->generateSecretKey();
+    $previousIntervalCode = $authenticator->oathTotp(
+        $secret,
+        $authenticator->getTimestamp() - 1,
+    );
+
+    expect(app(TwoFactorAuthenticationProvider::class)->verify($secret, $previousIntervalCode))
+        ->toBeTrue();
 });
 
 test('security page requires password confirmation when enabled', function () {
@@ -44,6 +60,21 @@ test('security page requires password confirmation when enabled', function () {
         ->get(route('security.edit'));
 
     $response->assertRedirect(route('password.confirm'));
+});
+
+test('a privileged user can register a passkey while MFA enforcement is enabled', function () {
+    Features::passkeys([
+        'confirmPassword' => true,
+    ]);
+    config(['operations.security.require_privileged_mfa' => true]);
+
+    $admin = User::factory()->create(['role' => 'company_admin']);
+
+    $this->actingAs($admin)
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->get(route('passkey.registration-options'))
+        ->assertSuccessful()
+        ->assertHeader('content-type', 'application/json');
 });
 
 test('security page renders without two factor when feature is disabled', function () {

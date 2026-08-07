@@ -6,6 +6,7 @@ use App\Actions\RecordActivity;
 use App\Http\Requests\CompleteDailyReportRequest;
 use App\Http\Requests\UpdateDailyReportRequest;
 use App\Models\DailyReport;
+use App\Models\LeaveRequest;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -99,7 +100,23 @@ class DailyReportController extends Controller
         }
 
         $company = $user->companyRecord;
-        $timeIn = now();
+        $timeIn = now($company?->timezone ?? config('app.timezone'));
+
+        if ($company !== null && ! $company->isWorkDay($timeIn)) {
+            throw ValidationException::withMessages([
+                'attendance' => 'Today is not a scheduled work day. Ask your administrator if attendance should be enabled.',
+            ]);
+        }
+
+        if ($user->leaveRequests()
+            ->where('status', LeaveRequest::STATUS_APPROVED)
+            ->whereDate('start_date', '<=', $timeIn)
+            ->whereDate('end_date', '>=', $timeIn)
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'attendance' => 'You have approved leave today, so attendance cannot be started.',
+            ]);
+        }
         $scheduledTimeIn = Carbon::createFromFormat(
             'Y-m-d H:i:s',
             $timeIn->toDateString().' '.($company?->work_start_time ?? '08:00:00'),
@@ -132,6 +149,10 @@ class DailyReportController extends Controller
     public function timeOut(Request $request, DailyReport $dailyReport, RecordActivity $recordActivity): RedirectResponse
     {
         Gate::authorize('update', $dailyReport);
+
+        if ($dailyReport->loadMissing('dtrSubmission')->isLocked()) {
+            throw ValidationException::withMessages(['summary' => 'A finalized DTR record cannot be edited.']);
+        }
 
         if ($dailyReport->time_out !== null) {
             throw ValidationException::withMessages([
@@ -254,6 +275,10 @@ class DailyReportController extends Controller
         $user = $request->user();
 
         Gate::authorize('delete', $dailyReport);
+
+        if ($dailyReport->loadMissing('dtrSubmission')->isLocked()) {
+            throw ValidationException::withMessages(['report' => 'A finalized DTR record cannot be deleted.']);
+        }
 
         if ($dailyReport->approval_status !== DailyReport::STATUS_REJECTED) {
             throw ValidationException::withMessages([
