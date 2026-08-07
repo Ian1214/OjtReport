@@ -7,6 +7,7 @@ use App\Http\Requests\ManageOjtIndexRequest;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -28,31 +29,39 @@ class ManagedOjtController extends Controller
 
         $filters = $request->validated();
         $ojtQuery = $company->ojts()
-                ->select([
-                    'id',
-                    'name',
-                    'email',
-                    'student_id',
-                    'department',
-                    'position',
-                    'supervisor_id',
-                    'supervisor_name',
-                    'required_hours',
-                    'end_date',
-                ])
-                ->with(['latestAccountSetupDelivery:id,user_id,status,queued_at,sent_at,failed_at,failure_reason'])
-                ->withSum('approvedDailyReports', 'total_hours')
-                ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
-                    $query->where(function (Builder $query) use ($search): void {
-                        $query
-                            ->where('name', 'like', "%{$search}%")
-                            ->orWhere('student_id', 'like', "%{$search}%")
-                            ->orWhere('department', 'like', "%{$search}%")
-                            ->orWhere('position', 'like', "%{$search}%");
-                    });
-                })
-                ->when(($filters['status'] ?? 'all') === 'active', fn (Builder $query): Builder => $query->whereNull('end_date'))
-                ->when(($filters['status'] ?? 'all') === 'completed', fn (Builder $query): Builder => $query->whereNotNull('end_date'));
+            ->select([
+                'id',
+                'name',
+                'email',
+                'student_id',
+                'department',
+                'position',
+                'supervisor_id',
+                'supervisor_name',
+                'required_hours',
+                'end_date',
+            ])
+            ->with(['latestAccountSetupDelivery' => fn (HasOne $query): HasOne => $query->select([
+                'account_setup_deliveries.id',
+                'account_setup_deliveries.user_id',
+                'account_setup_deliveries.status',
+                'account_setup_deliveries.queued_at',
+                'account_setup_deliveries.sent_at',
+                'account_setup_deliveries.failed_at',
+                'account_setup_deliveries.failure_reason',
+            ])])
+            ->withSum('approvedDailyReports', 'total_hours')
+            ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('student_id', 'like', "%{$search}%")
+                        ->orWhere('department', 'like', "%{$search}%")
+                        ->orWhere('position', 'like', "%{$search}%");
+                });
+            })
+            ->when(($filters['status'] ?? 'all') === 'active', fn (Builder $query): Builder => $query->whereNull('end_date'))
+            ->when(($filters['status'] ?? 'all') === 'completed', fn (Builder $query): Builder => $query->whereNotNull('end_date'));
         $ojtPaginator = $ojtQuery->latest()->paginate(12)->withQueryString();
         $totalOjtCount = $company->ojts()->count();
         $completedOjtCount = $company->ojts()->whereNotNull('end_date')->count();
