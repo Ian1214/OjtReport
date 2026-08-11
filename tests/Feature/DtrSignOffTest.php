@@ -50,7 +50,7 @@ test('a DTR is printable only after the OJT and supervisor sign and the administ
     $submission = DtrSubmission::query()->sole();
     expect($report->refresh()->dtr_submission_id)->toBe($submission->id)
         ->and($submission->student_signature_name)->toBe($ojt->name)
-        ->and($submission->student_signature_strokes)->toBe(json_decode(validDtrSignature(), true, flags: JSON_THROW_ON_ERROR))
+        ->and($submission->student_signature_strokes)->toEqual(json_decode(validDtrSignature(), true, flags: JSON_THROW_ON_ERROR))
         ->and($submission->student_signed_at)->not->toBeNull();
 
     $this->actingAs($ojt)
@@ -74,7 +74,7 @@ test('a DTR is printable only after the OJT and supervisor sign and the administ
 
     expect($submission->refresh())
         ->supervisor_signature_name->toBe($supervisor->name)
-        ->supervisor_signature_strokes->toBe(json_decode(validDtrSignature(), true, flags: JSON_THROW_ON_ERROR))
+        ->supervisor_signature_strokes->toEqual(json_decode(validDtrSignature(), true, flags: JSON_THROW_ON_ERROR))
         ->supervisor_signed_at->not->toBeNull();
 
     $this->actingAs($supervisor)->patch(route('dtr-submissions.review', $submission), [
@@ -84,7 +84,7 @@ test('a DTR is printable only after the OJT and supervisor sign and the administ
     ])->assertInvalid('decision');
 
     expect($submission->refresh()->supervisor_signature_strokes)
-        ->toBe(json_decode(validDtrSignature(), true, flags: JSON_THROW_ON_ERROR));
+        ->toEqual(json_decode(validDtrSignature(), true, flags: JSON_THROW_ON_ERROR));
 
     $this->actingAs($ojt)
         ->get(route('dtr-submissions.print', $submission))

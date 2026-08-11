@@ -39,7 +39,7 @@ test('an administrator can issue multiple partial certificates without exceeding
         ->and((float) CompletionCertificate::query()->sum('allocated_hours'))->toBe(500.0)
         ->and(CompletionCertificate::query()->first())
         ->status->toBe(CompletionCertificate::STATUS_PENDING_SUPERVISOR)
-        ->admin_signature_strokes->toBe(json_decode(validCertificateSignature(), true, flags: JSON_THROW_ON_ERROR));
+        ->admin_signature_strokes->toEqual(json_decode(validCertificateSignature(), true, flags: JSON_THROW_ON_ERROR));
 
     $this->actingAs($administrator)->get(route('certificates.index'))
         ->assertOk()
@@ -120,7 +120,7 @@ test('the assigned supervisor finalizes the certificate and queues it for the OJ
     expect($certificate->refresh())
         ->status->toBe(CompletionCertificate::STATUS_FINALIZED)
         ->supervisor_signature_name->toBe($supervisor->name)
-        ->supervisor_signature_strokes->toBe(json_decode(validCertificateSignature(100), true, flags: JSON_THROW_ON_ERROR))
+        ->supervisor_signature_strokes->toEqual(json_decode(validCertificateSignature(100), true, flags: JSON_THROW_ON_ERROR))
         ->snapshot_hash->toHaveLength(64);
 
     Notification::assertSentTo($ojt, CompletionCertificateIssued::class, function (CompletionCertificateIssued $notification) use ($ojt, $certificate): bool {
