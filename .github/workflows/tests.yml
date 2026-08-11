@@ -77,8 +77,26 @@ jobs:
       - name: Generate Wayfinder types
         run: php artisan wayfinder:generate --with-form --no-interaction
 
-      - name: Run CI Checks
-        run: composer ci:check
+      - name: Lint frontend
+        run: npm run lint:check
+
+      - name: Check frontend formatting
+        run: npm run format:check
+
+      - name: Check TypeScript
+        run: npm run types:check
+
+      - name: Build production assets
+        run: npm run build
+
+      - name: Check PHP formatting
+        run: composer lint:check
+
+      - name: Run deploy-gate static analysis
+        run: composer types:check
+
+      - name: Run application tests
+        run: php artisan test --compact
 
       - name: Report strict static-analysis debt
         continue-on-error: true
