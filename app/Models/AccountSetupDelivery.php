@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\AccountSetupDeliveryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,10 +21,9 @@ use Throwable;
  * @property Carbon|null $failed_at
  * @property string|null $failure_reason
  */
-
 class AccountSetupDelivery extends Model
 {
-    /** @use HasFactory<\Database\Factories\AccountSetupDeliveryFactory> */
+    /** @use HasFactory<AccountSetupDeliveryFactory> */
     use HasFactory;
 
     public const STATUS_QUEUED = 'queued';
