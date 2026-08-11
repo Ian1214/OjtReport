@@ -13,6 +13,7 @@ import {
     FileCheck2,
     ServerCog,
 } from 'lucide-react';
+import { NextActionCard, StatusBadge } from '@/components/dashboard-ui';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
@@ -71,43 +72,77 @@ export default function CompanyOverview({ company, stats }: Props) {
                         </Button>
                     </header>
 
-                    <section
-                        className={`relative overflow-hidden rounded-3xl border p-5 shadow-sm sm:p-6 ${needsAttention > 0 ? 'border-amber-500/25 bg-amber-500/6' : 'border-emerald-500/25 bg-emerald-500/6'}`}
-                    >
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex items-start gap-3">
-                                <span
-                                    className={`grid size-11 shrink-0 place-items-center rounded-2xl ${needsAttention > 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'}`}
+                    <NextActionCard
+                        icon={
+                            stats.totalOjtCount === 0
+                                ? UserPlus
+                                : needsAttention > 0
+                                  ? ClipboardCheck
+                                  : CheckCircle2
+                        }
+                        title={
+                            stats.totalOjtCount === 0
+                                ? 'Add your first OJT account'
+                                : needsAttention > 0
+                                  ? `${needsAttention} item${needsAttention === 1 ? '' : 's'} need your attention`
+                                  : 'Everything is up to date'
+                        }
+                        description={
+                            stats.totalOjtCount === 0
+                                ? 'Create an OJT account, assign a supervisor, and begin monitoring attendance.'
+                                : needsAttention > 0
+                                  ? 'Review pending reports and time-correction requests to keep records moving.'
+                                  : 'There are no pending reports or time requests. You can continue monitoring your OJT team.'
+                        }
+                        tone={
+                            stats.totalOjtCount === 0
+                                ? 'primary'
+                                : needsAttention > 0
+                                  ? 'warning'
+                                  : 'success'
+                        }
+                        status={
+                            <StatusBadge
+                                status={
+                                    stats.totalOjtCount === 0
+                                        ? 'not_started'
+                                        : needsAttention > 0
+                                          ? 'pending'
+                                          : 'approved'
+                                }
+                                label={
+                                    stats.totalOjtCount === 0
+                                        ? 'Setup needed'
+                                        : needsAttention > 0
+                                          ? 'Action required'
+                                          : 'All clear'
+                                }
+                            />
+                        }
+                        action={
+                            <Button variant="outline" asChild>
+                                <Link
+                                    href={
+                                        stats.totalOjtCount === 0
+                                            ? managedOjtsIndex()
+                                            : navigation.pendingReportsCount > 0
+                                              ? approvalInbox()
+                                              : navigation.pendingCorrectionsCount >
+                                                  0
+                                                ? attendanceCorrections()
+                                                : managedOjtsIndex()
+                                    }
                                 >
-                                    {needsAttention > 0 ? (
-                                        <ClipboardCheck className="size-5" />
-                                    ) : (
-                                        <CheckCircle2 className="size-5" />
-                                    )}
-                                </span>
-                                <div>
-                                    <p className="font-semibold">
-                                        {needsAttention > 0
-                                            ? `${needsAttention} item${needsAttention === 1 ? '' : 's'} need your attention`
-                                            : 'Everything is up to date'}
-                                    </p>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        {needsAttention > 0
-                                            ? 'Review pending reports and time-correction requests when you are ready.'
-                                            : 'There are no pending reports or time requests right now.'}
-                                    </p>
-                                </div>
-                            </div>
-                            {needsAttention > 0 && (
-                                <Button variant="outline" asChild>
-                                    <Link href={approvalInbox()}>
-                                        Review pending work
-                                        <ArrowRight />
-                                    </Link>
-                                </Button>
-                            )}
-                        </div>
-                    </section>
+                                    {stats.totalOjtCount === 0
+                                        ? 'Create OJT account'
+                                        : needsAttention > 0
+                                          ? 'Review pending work'
+                                          : 'View OJT team'}
+                                    <ArrowRight />
+                                </Link>
+                            </Button>
+                        }
+                    />
 
                     <div className="grid gap-3 sm:grid-cols-3">
                         <StatCard

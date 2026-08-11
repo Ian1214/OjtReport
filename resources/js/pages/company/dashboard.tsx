@@ -1,6 +1,7 @@
 import { Form, Head, Link, router, usePage, usePoll } from '@inertiajs/react';
 import {
     AlertCircle,
+    CalendarDays,
     CheckCircle2,
     Clock3,
     FileText,
@@ -15,10 +16,16 @@ import {
     destroy as destroyOjt,
     resendSetupLink,
     store,
+    updateStartDate,
     updateSupervisor,
 } from '@/actions/App/Http/Controllers/Company/OjtController';
 import { store as storeSupervisor } from '@/actions/App/Http/Controllers/Company/SupervisorController';
-import { DashboardHero, MetricCard } from '@/components/dashboard-ui';
+import {
+    DashboardHero,
+    EmptyState,
+    MetricCard,
+    StatusBadge,
+} from '@/components/dashboard-ui';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -52,6 +59,7 @@ type Ojt = {
     supervisorName: string | null;
     supervisorId: number | null;
     requiredHours: number;
+    startDate: string | null;
     completedHours: number;
     hoursLeft: number;
     isComplete: boolean;
@@ -178,7 +186,10 @@ export default function CompanyDashboard({
                                     the dashboard.
                                 </p>
                             </div>
-                            <Badge variant="outline">Setup link queued</Badge>
+                            <StatusBadge
+                                status="queued"
+                                label="Setup link queued"
+                            />
                         </div>
                     </section>
                 )}
@@ -275,16 +286,30 @@ export default function CompanyDashboard({
                     </form>
 
                     {ojts.length === 0 ? (
-                        <div className="mt-5 rounded-xl border border-dashed bg-muted/20 p-10 text-center">
-                            <Users className="mx-auto size-7 text-muted-foreground" />
-                            <p className="mt-3 font-medium">
-                                No OJT accounts yet
-                            </p>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                Add your first intern to begin monitoring
-                                attendance.
-                            </p>
-                        </div>
+                        <EmptyState
+                            icon={Users}
+                            title={
+                                filters.search || filters.status !== 'all'
+                                    ? 'No matching OJTs'
+                                    : 'No OJT accounts yet'
+                            }
+                            description={
+                                filters.search || filters.status !== 'all'
+                                    ? 'Try a different search or status filter.'
+                                    : 'Add your first intern to begin monitoring attendance.'
+                            }
+                            action={
+                                !filters.search && filters.status === 'all' ? (
+                                    <Button
+                                        onClick={() => setShowCreateForm(true)}
+                                    >
+                                        <Plus />
+                                        Add your first OJT
+                                    </Button>
+                                ) : undefined
+                            }
+                            className="mt-5"
+                        />
                     ) : (
                         <>
                             <div className="mt-5 grid gap-3">
@@ -564,19 +589,9 @@ function OjtProgressCard({
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate font-semibold">{ojt.name}</p>
-                        <Badge
-                            variant="outline"
-                            className={
-                                ojt.isOnline
-                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                    : 'text-muted-foreground'
-                            }
-                        >
-                            <span
-                                className={`size-1.5 rounded-full ${ojt.isOnline ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`}
-                            />
-                            {ojt.isOnline ? 'Online' : 'Offline'}
-                        </Badge>
+                        <StatusBadge
+                            status={ojt.isOnline ? 'online' : 'offline'}
+                        />
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {ojt.studentId} · {ojt.position} · {ojt.department}
@@ -586,11 +601,14 @@ function OjtProgressCard({
                     </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    <Badge variant={ojt.isComplete ? 'default' : 'secondary'}>
-                        {ojt.isComplete
-                            ? 'Completed'
-                            : `${ojt.hoursLeft.toFixed(2)} hrs left`}
-                    </Badge>
+                    <StatusBadge
+                        status={ojt.isComplete ? 'completed' : 'in_progress'}
+                        label={
+                            ojt.isComplete
+                                ? 'Completed'
+                                : `${ojt.hoursLeft.toFixed(2)} hrs left`
+                        }
+                    />
                     <Button size="sm" variant="outline" asChild>
                         <Link href={showOjt(ojt.id)}>
                             <FileText />
@@ -610,6 +628,7 @@ function OjtProgressCard({
                             </Button>
                         )}
                     </Form>
+                    <StartDateDialog ojt={ojt} />
                     <OjtDeletionDialog ojt={ojt} />
                 </div>
             </div>
@@ -666,6 +685,60 @@ function OjtProgressCard({
                 )}
             </Form>
         </article>
+    );
+}
+
+function StartDateDialog({ ojt }: { ojt: Ojt }) {
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                    <CalendarDays />
+                    Start date
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogTitle>Correct internship start date</DialogTitle>
+                <DialogDescription>
+                    Use the OJT&apos;s actual first workday. This allows them to
+                    submit earlier attendance for company approval.
+                </DialogDescription>
+                <Form
+                    {...updateStartDate.form(ojt.id)}
+                    className="mt-5 grid gap-5"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <div className="grid gap-2">
+                                <Label htmlFor={`start-date-${ojt.id}`}>
+                                    Actual first workday
+                                </Label>
+                                <Input
+                                    id={`start-date-${ojt.id}`}
+                                    name="start_date"
+                                    type="date"
+                                    defaultValue={ojt.startDate ?? ''}
+                                    max={new Date().toLocaleDateString('en-CA')}
+                                    required
+                                />
+                                <InputError message={errors.start_date} />
+                            </div>
+                            <DialogFooter className="gap-2">
+                                <DialogClose asChild>
+                                    <Button type="button" variant="secondary">
+                                        Cancel
+                                    </Button>
+                                </DialogClose>
+                                <Button type="submit" disabled={processing}>
+                                    {processing && <Spinner />}
+                                    Save start date
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
     );
 }
 

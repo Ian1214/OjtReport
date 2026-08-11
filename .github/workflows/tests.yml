@@ -12,6 +12,34 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:9roCpmzRDvc2nAK1wg3y9DkcoSmgf0AyGNCUS9ueTvE=
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: testing
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: testing
+          MYSQL_ROOT_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
       - name: Checkout code
@@ -25,17 +53,32 @@ jobs:
           php-version: '8.5'
           tools: composer:v2
           coverage: none
+          extensions: mbstring, pdo_mysql, xml, xmlwriter
 
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
+          cache: npm
 
-      - name: Setup Application
-        run: composer setup
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Validate Composer metadata
+        run: composer validate --strict
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Validate database migrations
+        run: php artisan migrate:fresh --force
 
       - name: Run CI Checks
         run: composer ci:check
+
+      - name: Report strict static-analysis debt
+        continue-on-error: true
+        run: composer types:check:strict
 
       - name: Audit PHP dependencies
         run: composer audit --locked

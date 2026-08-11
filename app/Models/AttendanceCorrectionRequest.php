@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use Database\Factories\AttendanceCorrectionRequestFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AttendanceCorrectionRequest extends Model
 {
-    /** @use HasFactory<\Database\Factories\AttendanceCorrectionRequestFactory> */
+    /** @use HasFactory<AttendanceCorrectionRequestFactory> */
     use HasFactory;
 
     public const STATUS_APPROVED = 'approved';
@@ -42,6 +44,31 @@ class AttendanceCorrectionRequest extends Model
             'supervisor_reviewed_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
+    }
+
+    /** @return Attribute<string|null, string|null> */
+    protected function proposedTimeIn(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value): ?string => self::normalizeTime($value),
+        );
+    }
+
+    /** @return Attribute<string|null, string|null> */
+    protected function proposedTimeOut(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value): ?string => self::normalizeTime($value),
+        );
+    }
+
+    private static function normalizeTime(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        return preg_match('/^\d{2}:\d{2}$/', $value) === 1 ? "{$value}:00" : $value;
     }
 
     public function dailyReport(): BelongsTo

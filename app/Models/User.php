@@ -38,10 +38,13 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $email_verified_at
  * @property Carbon|null $terms_accepted_at
  * @property Carbon|null $last_seen_at
+ * @property string $timezone
+ * @property array<string, bool|string>|null $preferences
  * @property string $password
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read User|null $assignedSupervisor
  */
 #[Fillable([
     'name',
@@ -62,6 +65,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'email',
     'password',
     'terms_accepted_at',
+    'timezone',
+    'preferences',
 ])]
 #[Hidden([
     'password',
@@ -71,7 +76,43 @@ class User extends Authenticatable implements PasskeyUser
 {
     use HasFactory, Notifiable, PasskeyAuthenticatable, SoftDeletes, TwoFactorAuthenticatable;
 
+    /** @var array<string, mixed> */
+    protected $attributes = [
+        'timezone' => 'Asia/Manila',
+    ];
+
     public const ONLINE_WINDOW_SECONDS = 120;
+
+    /** @var list<string> */
+    public const SUPPORTED_TIMEZONES = [
+        'Asia/Manila',
+        'Asia/Singapore',
+        'Asia/Tokyo',
+        'UTC',
+    ];
+
+    /** @var array<string, string> */
+    public const SUPPORTED_DATE_FORMATS = [
+        'month_first' => 'Aug 11, 2026',
+        'day_first' => '11 Aug 2026',
+        'iso' => '2026-08-11',
+    ];
+
+    /** @var array<string, string> */
+    public const SUPPORTED_INTERFACE_DENSITIES = [
+        'comfortable' => 'Comfortable',
+        'compact' => 'Compact',
+    ];
+
+    /** @var array<string, bool|string> */
+    public const DEFAULT_PREFERENCES = [
+        'date_format' => 'month_first',
+        'interface_density' => 'comfortable',
+        'reduce_motion' => false,
+        'high_contrast' => false,
+        'report_updates' => true,
+        'attendance_updates' => true,
+    ];
 
     protected function casts(): array
     {
@@ -83,7 +124,21 @@ class User extends Authenticatable implements PasskeyUser
             'must_change_password' => 'boolean',
             'start_date' => 'date',
             'end_date' => 'date',
+            'preferences' => 'array',
         ];
+    }
+
+    /**
+     * @return array<string, bool|string>
+     */
+    public function resolvedPreferences(): array
+    {
+        return array_replace(self::DEFAULT_PREFERENCES, $this->preferences ?? []);
+    }
+
+    public function wantsNotification(string $preference): bool
+    {
+        return (bool) ($this->resolvedPreferences()[$preference] ?? true);
     }
 
     public function dailyReports(): HasMany
@@ -99,6 +154,16 @@ class User extends Authenticatable implements PasskeyUser
     public function dtrSubmissions(): HasMany
     {
         return $this->hasMany(DtrSubmission::class);
+    }
+
+    public function completionCertificates(): HasMany
+    {
+        return $this->hasMany(CompletionCertificate::class);
+    }
+
+    public function supervisedCompletionCertificates(): HasMany
+    {
+        return $this->hasMany(CompletionCertificate::class, 'supervisor_id');
     }
 
     public function attendanceCorrectionRequests(): HasMany

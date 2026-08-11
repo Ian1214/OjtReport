@@ -1,7 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import type { AppVariant } from '@/types';
+import type { AppVariant, Auth, UserPreferences } from '@/types';
 
 type Props = {
     children: ReactNode;
@@ -9,7 +9,11 @@ type Props = {
 };
 
 export function AppShell({ children, variant = 'sidebar' }: Props) {
-    const isOpen = usePage().props.sidebarOpen;
+    const { auth, sidebarOpen } = usePage<{
+        auth: Auth;
+        sidebarOpen: boolean;
+    }>().props;
+    const preferences: Partial<UserPreferences> = auth.user.preferences ?? {};
 
     if (variant === 'header') {
         return (
@@ -17,5 +21,15 @@ export function AppShell({ children, variant = 'sidebar' }: Props) {
         );
     }
 
-    return <SidebarProvider defaultOpen={isOpen}>{children}</SidebarProvider>;
+    return (
+        <SidebarProvider
+            className="command-shell"
+            defaultOpen={sidebarOpen}
+            data-density={preferences.interface_density ?? 'comfortable'}
+            data-reduce-motion={preferences.reduce_motion ?? false}
+            data-high-contrast={preferences.high_contrast ?? false}
+        >
+            {children}
+        </SidebarProvider>
+    );
 }

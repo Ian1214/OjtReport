@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Company;
 use App\Actions\RecordActivity;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCompanyOjtRequest;
+use App\Http\Requests\UpdateOjtStartDateRequest;
 use App\Http\Requests\UpdateOjtSupervisorRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -118,6 +119,41 @@ class OjtController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => "Supervisor assigned to {$ojt->name}.",
+        ]);
+
+        return to_route('company.ojts.index');
+    }
+
+    public function updateStartDate(
+        UpdateOjtStartDateRequest $request,
+        User $ojt,
+        RecordActivity $recordActivity,
+    ): RedirectResponse {
+        /** @var User $companyAdmin */
+        $companyAdmin = $request->user();
+        $company = $companyAdmin->companyRecord;
+
+        Gate::authorize('update', $company);
+
+        abort_unless($ojt->company_id === $company->id && $ojt->role === 'ojt', 404);
+
+        $previousStartDate = $ojt->start_date?->toDateString();
+        $ojt->update(['start_date' => $request->date('start_date')]);
+
+        $recordActivity->handle(
+            $companyAdmin,
+            'account.ojt_start_date_updated',
+            "{$companyAdmin->name} corrected the internship start date for {$ojt->name}.",
+            $ojt,
+            [
+                'previous_start_date' => $previousStartDate,
+                'new_start_date' => $ojt->start_date?->toDateString(),
+            ],
+        );
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "{$ojt->name}'s internship start date was updated.",
         ]);
 
         return to_route('company.ojts.index');

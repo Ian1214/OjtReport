@@ -3,10 +3,21 @@
 namespace App\Models;
 
 use Database\Factories\CompanyFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $work_start_time
+ * @property int $late_grace_minutes
+ * @property string $timezone
+ * @property list<int>|null $work_days
+ * @property-read Collection<int, CompanyHoliday> $holidays
+ */
 class Company extends Model
 {
     /** @use HasFactory<CompanyFactory> */
@@ -26,6 +37,23 @@ class Company extends Model
             'late_grace_minutes' => 'integer',
             'work_days' => 'array',
         ];
+    }
+
+    /** @return Attribute<string|null, string|null> */
+    protected function workStartTime(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value): ?string => self::normalizeTime($value),
+        );
+    }
+
+    private static function normalizeTime(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        return preg_match('/^\d{2}:\d{2}$/', $value) === 1 ? "{$value}:00" : $value;
     }
 
     public function users(): HasMany
@@ -56,6 +84,11 @@ class Company extends Model
     public function leaveRequests(): HasMany
     {
         return $this->hasMany(LeaveRequest::class);
+    }
+
+    public function completionCertificates(): HasMany
+    {
+        return $this->hasMany(CompletionCertificate::class);
     }
 
     public function isWorkDay(\DateTimeInterface $date): bool

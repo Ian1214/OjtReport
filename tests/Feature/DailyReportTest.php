@@ -1,7 +1,8 @@
 <?php
 
-use App\Models\DailyReport;
 use App\Models\Company;
+use App\Models\DailyReport;
+use App\Models\DtrSubmission;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 
@@ -24,6 +25,131 @@ test('an OJT can time in using the current system time', function () {
         ->scheduled_time_in->toBe('08:00:00')
         ->attendance_status->toBe(DailyReport::ATTENDANCE_LATE)
         ->late_minutes->toBe(31);
+});
+
+test('an OJT can submit a previous workday for company approval', function () {
+    Carbon::setTestNow('2026-08-11 10:00:00');
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'start_date' => '2026-08-04',
+    ]);
+
+    $response = $this->actingAs($user)->post(route('reports.historical.store'), [
+        'report_date' => '2026-08-04',
+        'time_in' => '08:00',
+        'time_out' => '17:00',
+        'summary' => 'Completed onboarding and prepared the assigned workstation.',
+    ]);
+
+    $response
+        ->assertRedirect(route('reports.index', absolute: false))
+        ->assertInertiaFlash('toast.type', 'success');
+
+    $report = $user->dailyReports()->firstOrFail();
+
+    expect($report)
+        ->report_date->toDateString()->toBe('2026-08-04')
+        ->time_in->toBe('08:00:00')
+        ->time_out->toBe('17:00:00')
+        ->total_hours->toBe('8.00')
+        ->approval_status->toBe(DailyReport::STATUS_PENDING)
+        ->attendance_status->toBe(DailyReport::ATTENDANCE_ON_TIME)
+        ->late_minutes->toBe(0);
+    expect($user->refresh()->end_date)->toBeNull();
+
+    $this->actingAs($user)
+        ->get(route('reports.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->where('reports.0.is_historical', true)
+            ->where('historicalEntry.earliestDate', '2026-08-04')
+            ->where('historicalEntry.latestDate', '2026-08-10')
+            ->where('historicalEntry.enabled', true));
+});
+
+test('historical workdays must be within the OJT period and use an unused past date', function () {
+    Carbon::setTestNow('2026-08-11 10:00:00');
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'start_date' => '2026-08-04',
+    ]);
+    DailyReport::factory()->for($user)->create(['report_date' => '2026-08-05']);
+    $validPayload = [
+        'time_in' => '08:00',
+        'time_out' => '17:00',
+        'summary' => 'Completed verified historical OJT work for this date.',
+    ];
+
+    foreach (['2026-08-03', '2026-08-11', '2026-08-12', '2026-08-05'] as $reportDate) {
+        $this->actingAs($user)
+            ->post(route('reports.historical.store'), [
+                ...$validPayload,
+                'report_date' => $reportDate,
+            ])
+            ->assertInvalid('report_date');
+    }
+
+    $this->actingAs($user)
+        ->post(route('reports.historical.store'), [
+            ...$validPayload,
+            'report_date' => '2026-08-06',
+            'time_in' => '17:00',
+            'time_out' => '08:00',
+        ])
+        ->assertInvalid('time_out');
+
+    expect($user->dailyReports()->count())->toBe(1);
+});
+
+test('historical workdays cannot alter dates covered by a submitted DTR', function () {
+    Carbon::setTestNow('2026-08-11 10:00:00');
+    $company = Company::factory()->create();
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'start_date' => '2026-08-04',
+    ]);
+    DtrSubmission::factory()->create([
+        'company_id' => $company->id,
+        'user_id' => $user->id,
+        'period_start' => '2026-08-04',
+        'period_end' => '2026-08-08',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('reports.historical.store'), [
+            'report_date' => '2026-08-06',
+            'time_in' => '08:00',
+            'time_out' => '17:00',
+            'summary' => 'Attempted historical work entry in a submitted period.',
+        ])
+        ->assertInvalid('report_date');
+
+    expect($user->dailyReports()->count())->toBe(0);
+});
+
+test('company administrators cannot submit historical OJT workdays', function () {
+    Carbon::setTestNow('2026-08-11 10:00:00');
+    $company = Company::factory()->create();
+    $companyAdmin = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'role' => 'company_admin',
+        'start_date' => '2026-08-04',
+    ]);
+
+    $this->actingAs($companyAdmin)
+        ->post(route('reports.historical.store'), [
+            'report_date' => '2026-08-04',
+            'time_in' => '08:00',
+            'time_out' => '17:00',
+            'summary' => 'Administrators must not create attendance for an OJT.',
+        ])
+        ->assertForbidden();
 });
 
 test('time in uses the company schedule and grace period', function (

@@ -3,6 +3,7 @@ import {
     CheckCircle2,
     Clock3,
     FileCheck2,
+    History,
     Inbox,
     RotateCcw,
     Search,
@@ -50,6 +51,7 @@ type Report = {
     scheduledTimeIn: string | null;
     attendanceStatus: 'on_time' | 'late' | null;
     lateMinutes: number | null;
+    isHistorical: boolean;
     ojt: {
         id: number;
         name: string;
@@ -325,6 +327,15 @@ function ReportCard({ report }: { report: Report }) {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={report.status} />
+                    {report.isHistorical && (
+                        <Badge
+                            variant="outline"
+                            className="border-primary/25 bg-primary/8 text-primary"
+                        >
+                            <History />
+                            Past entry
+                        </Badge>
+                    )}
                     <Badge
                         variant="outline"
                         className={

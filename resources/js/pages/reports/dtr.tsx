@@ -1,27 +1,52 @@
-import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { ArrowLeft, FileSignature, Printer, ShieldCheck } from 'lucide-react';
+import { SignaturePreview } from '@/components/signature-pad';
+import type { SignatureValue } from '@/components/signature-pad';
 import { Button } from '@/components/ui/button';
+import { index as dtrSignOffIndex } from '@/routes/dtr-submissions';
 import { index as reportsIndex } from '@/routes/reports';
-import type { User } from '@/types';
 
 type DtrReport = {
     id: number;
     report_date: string;
-    time_in: string;
-    time_out: string;
+    time_in: string | null;
+    time_out: string | null;
     total_hours: string;
     attendance_status: 'on_time' | 'late' | null;
     late_minutes: number | null;
 };
 
 type Props = {
+    profile: {
+        name: string;
+        studentId: string | null;
+        position: string | null;
+        department: string | null;
+        company: string | null;
+    };
     reports: DtrReport[];
     totalHours: number;
+    printable: boolean;
+    submission: {
+        periodStart: string;
+        periodEnd: string;
+        studentSignatureName: string | null;
+        studentSignatureStrokes: SignatureValue | null;
+        studentSignedAt: string;
+        supervisorSignatureName: string | null;
+        supervisorSignatureStrokes: SignatureValue | null;
+        supervisorSignedAt: string;
+        verifiedAt: string | null;
+    } | null;
 };
 
-export default function Dtr({ reports, totalHours }: Props) {
-    const { auth } = usePage<{ auth: { user: User } }>().props;
-
+export default function Dtr({
+    profile,
+    reports,
+    totalHours,
+    printable,
+    submission,
+}: Props) {
     return (
         <>
             <Head title="Daily Time Record" />
@@ -30,16 +55,48 @@ export default function Dtr({ reports, totalHours }: Props) {
                 <div className="mx-auto max-w-5xl rounded-xl border bg-card p-6 text-card-foreground shadow-sm sm:p-10 print:max-w-none print:rounded-none print:border-0 print:p-0 print:shadow-none">
                     <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center print:hidden">
                         <Button variant="outline" asChild>
-                            <Link href={reportsIndex()}>
+                            <Link
+                                href={
+                                    printable
+                                        ? dtrSignOffIndex()
+                                        : reportsIndex()
+                                }
+                            >
                                 <ArrowLeft />
-                                Back to reports
+                                {printable
+                                    ? 'Back to DTR sign-off'
+                                    : 'Back to reports'}
                             </Link>
                         </Button>
-                        <Button type="button" onClick={() => window.print()}>
-                            <Printer />
-                            Print DTR
-                        </Button>
+                        {printable ? (
+                            <Button
+                                type="button"
+                                onClick={() => window.print()}
+                            >
+                                <Printer />
+                                Print signed DTR
+                            </Button>
+                        ) : (
+                            <Button asChild>
+                                <Link href={dtrSignOffIndex()}>
+                                    <FileSignature />
+                                    Sign DTR before printing
+                                </Link>
+                            </Button>
+                        )}
                     </div>
+
+                    {!printable && (
+                        <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200 print:hidden">
+                            <FileSignature className="mt-0.5 size-5 shrink-0" />
+                            <p>
+                                This is a preview. Printing becomes available
+                                after you sign and submit a period, your
+                                supervisor signs it, and the company
+                                administrator completes verification.
+                            </p>
+                        </div>
+                    )}
 
                     <header className="border-b pb-6 text-center">
                         <p className="text-sm font-medium tracking-[0.2em] text-muted-foreground uppercase">
@@ -48,21 +105,27 @@ export default function Dtr({ reports, totalHours }: Props) {
                         <h1 className="mt-2 text-2xl font-semibold">
                             Daily Time Record
                         </h1>
+                        {submission && (
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                {formatDate(submission.periodStart)} –{' '}
+                                {formatDate(submission.periodEnd)}
+                            </p>
+                        )}
                     </header>
 
                     <section className="grid gap-3 py-6 text-sm sm:grid-cols-2">
-                        <DtrDetail label="Name" value={auth.user.name} />
+                        <DtrDetail label="Name" value={profile.name} />
                         <DtrDetail
                             label="Student ID"
-                            value={auth.user.student_id ?? 'Not assigned'}
+                            value={profile.studentId ?? 'Not assigned'}
                         />
                         <DtrDetail
                             label="OJT Position / Department"
-                            value={`${auth.user.position} / ${auth.user.department}`}
+                            value={`${profile.position ?? 'Not set'} / ${profile.department ?? 'Not set'}`}
                         />
                         <DtrDetail
                             label="Company"
-                            value={auth.user.company ?? 'Not set'}
+                            value={profile.company ?? 'Not set'}
                         />
                     </section>
 
@@ -147,14 +210,35 @@ export default function Dtr({ reports, totalHours }: Props) {
 
                     <div className="mt-16 grid gap-12 text-sm sm:grid-cols-2">
                         <SignatureLine
-                            name={auth.user.name}
+                            name={
+                                submission?.studentSignatureName ?? profile.name
+                            }
                             label="Student signature"
+                            strokes={
+                                submission?.studentSignatureStrokes ?? null
+                            }
+                            signedAt={submission?.studentSignedAt ?? null}
                         />
                         <SignatureLine
-                            name={auth.user.supervisor_name ?? 'Not assigned'}
+                            name={
+                                submission?.supervisorSignatureName ??
+                                'Awaiting supervisor'
+                            }
                             label="Supervisor signature"
+                            strokes={
+                                submission?.supervisorSignatureStrokes ?? null
+                            }
+                            signedAt={submission?.supervisorSignedAt ?? null}
                         />
                     </div>
+
+                    {submission?.verifiedAt && (
+                        <div className="mt-10 flex items-center justify-center gap-2 border-t pt-4 text-xs text-muted-foreground">
+                            <ShieldCheck className="size-4" />
+                            Company verified{' '}
+                            {formatDateTime(submission.verifiedAt)}
+                        </div>
+                    )}
                 </div>
             </main>
         </>
@@ -170,13 +254,51 @@ function DtrDetail({ label, value }: { label: string; value: string }) {
     );
 }
 
-function SignatureLine({ name, label }: { name: string; label: string }) {
+function SignatureLine({
+    name,
+    label,
+    strokes,
+    signedAt,
+}: {
+    name: string;
+    label: string;
+    strokes: SignatureValue | null;
+    signedAt: string | null;
+}) {
+    const hasDrawing = Boolean(strokes?.strokes.length);
+
     return (
-        <div className="border-t pt-2 text-center">
-            <p className="font-medium">{name}</p>
-            <p className="mt-1 text-muted-foreground">{label}</p>
+        <div className="text-center">
+            <div className="flex min-h-24 items-end justify-center px-4">
+                {hasDrawing ? (
+                    <SignaturePreview
+                        value={strokes}
+                        label={`${name} ${label}`}
+                        className="h-24 max-w-xs"
+                    />
+                ) : (
+                    <p className="pb-3 font-medium italic">{name}</p>
+                )}
+            </div>
+            <div className="border-t pt-2">
+                <p className="font-medium">{name}</p>
+                <p className="mt-1 text-muted-foreground">{label}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                    {signedAt
+                        ? `Electronically signed ${formatDateTime(signedAt)}`
+                        : 'Not yet electronically signed'}
+                </p>
+            </div>
         </div>
     );
+}
+
+function formatDateTime(date: string): string {
+    return new Intl.DateTimeFormat('en-PH', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Asia/Manila',
+    }).format(new Date(date));
 }
 
 function formatDate(date: string): string {
@@ -185,7 +307,11 @@ function formatDate(date: string): string {
     }).format(new Date(`${date.slice(0, 10)}T00:00:00`));
 }
 
-function formatTime(time: string): string {
+function formatTime(time: string | null): string {
+    if (!time) {
+        return '—';
+    }
+
     const [hours = 0, minutes = 0] = time.split(':').map(Number);
 
     return new Intl.DateTimeFormat('en-PH', {

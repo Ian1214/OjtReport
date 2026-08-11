@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\RecordActivity;
 use App\Http\Requests\CompleteDailyReportRequest;
+use App\Http\Requests\StoreDailyReportRequest;
 use App\Http\Requests\UpdateDailyReportRequest;
 use App\Models\DailyReport;
 use App\Models\LeaveRequest;
@@ -56,6 +57,7 @@ class DailyReportController extends Controller
                     'scheduled_grace_minutes',
                     'attendance_status',
                     'late_minutes',
+                    'created_at',
                 ])
                 ->map(fn (DailyReport $report): array => [
                     'id' => $report->id,
@@ -71,12 +73,23 @@ class DailyReportController extends Controller
                     'scheduled_time_in' => $report->scheduled_time_in,
                     'attendance_status' => $report->attendance_status,
                     'late_minutes' => $report->late_minutes,
+                    'is_historical' => ! $report->created_at->isSameDay($report->report_date),
                 ]),
             'activeReport' => $user->dailyReports()
                 ->whereNull('summary')
                 ->oldest('report_date')
                 ->first(['id', 'report_date', 'time_in', 'time_out', 'scheduled_time_in', 'attendance_status', 'late_minutes']),
             'today' => today()->toDateString(),
+            'historicalEntry' => [
+                'earliestDate' => $user->start_date?->toDateString(),
+                'latestDate' => now($user->companyRecord?->timezone ?? config('app.timezone'))
+                    ->subDay()
+                    ->toDateString(),
+                'enabled' => $user->start_date !== null
+                    && $user->start_date->isBefore(
+                        now($user->companyRecord?->timezone ?? config('app.timezone'))->startOfDay(),
+                    ),
+            ],
         ]);
     }
 
@@ -142,6 +155,59 @@ class DailyReportController extends Controller
             $report,
             ['attendance_status' => $report->attendance_status],
         );
+
+        return to_route('reports.index');
+    }
+
+    public function storeHistorical(
+        StoreDailyReportRequest $request,
+        RecordActivity $recordActivity,
+    ): RedirectResponse {
+        /** @var User $user */
+        $user = $request->user();
+        $validated = $request->validated();
+        $timezone = $user->companyRecord?->timezone ?? config('app.timezone');
+        $reportDate = (string) $validated['report_date'];
+        $timeIn = Carbon::createFromFormat('Y-m-d H:i', "{$reportDate} {$validated['time_in']}", $timezone);
+        $timeOut = Carbon::createFromFormat('Y-m-d H:i', "{$reportDate} {$validated['time_out']}", $timezone);
+        $scheduledTimeIn = Carbon::createFromFormat(
+            'Y-m-d H:i:s',
+            "{$reportDate} ".($user->companyRecord?->work_start_time ?? '08:00:00'),
+            $timezone,
+        );
+        $punctuality = DailyReport::classifyPunctuality(
+            $timeIn,
+            $scheduledTimeIn,
+            $user->companyRecord?->late_grace_minutes ?? 0,
+        );
+
+        $report = DB::transaction(fn (): DailyReport => $user->dailyReports()->create([
+            'report_date' => $reportDate,
+            'time_in' => $timeIn->format('H:i:s'),
+            'scheduled_time_in' => $scheduledTimeIn->format('H:i:s'),
+            'scheduled_grace_minutes' => $user->companyRecord?->late_grace_minutes ?? 0,
+            ...$punctuality,
+            'time_out' => $timeOut->format('H:i:s'),
+            'total_hours' => DailyReport::calculateTotalHours($timeIn, $timeOut),
+            'summary' => $validated['summary'],
+            'approval_status' => DailyReport::STATUS_PENDING,
+        ]), attempts: 3);
+
+        $recordActivity->handle(
+            $user,
+            'report.historical_submitted',
+            "{$user->name} submitted a historical daily report for {$reportDate}.",
+            $report,
+            [
+                'entry_type' => 'historical',
+                'total_hours' => (float) $report->total_hours,
+            ],
+        );
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Past workday submitted. Its hours will count after company approval.',
+        ]);
 
         return to_route('reports.index');
     }
@@ -231,12 +297,21 @@ class DailyReportController extends Controller
         Gate::authorize('viewAny', DailyReport::class);
 
         return Inertia::render('reports/dtr', [
+            'profile' => [
+                'name' => $user->name,
+                'studentId' => $user->student_id,
+                'position' => $user->position,
+                'department' => $user->department,
+                'company' => $user->companyRecord?->name ?? $user->company,
+            ],
             'reports' => $user->dailyReports()
                 ->whereNotNull('summary')
                 ->approved()
                 ->oldest('report_date')
                 ->get(['id', 'report_date', 'time_in', 'time_out', 'total_hours', 'attendance_status', 'late_minutes']),
             'totalHours' => $user->approvedDailyReports()->sum('total_hours'),
+            'printable' => false,
+            'submission' => null,
         ]);
     }
 

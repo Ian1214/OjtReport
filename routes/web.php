@@ -2,16 +2,19 @@
 
 use App\Http\Controllers\AttendanceCorrectionController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\Company\ActivityLogController;
 use App\Http\Controllers\Company\AttendancePolicyController;
 use App\Http\Controllers\Company\CompanyHolidayController;
 use App\Http\Controllers\Company\DailyReportReviewController;
 use App\Http\Controllers\Company\ManagedOjtController;
+use App\Http\Controllers\Company\OjtAnalyticsController;
 use App\Http\Controllers\Company\OjtController;
 use App\Http\Controllers\Company\OperationsController;
 use App\Http\Controllers\Company\ReportApprovalInboxController;
 use App\Http\Controllers\Company\SupervisorController;
 use App\Http\Controllers\CompanyDashboardController;
+use App\Http\Controllers\CompletionCertificateController;
 use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DirectMessageController;
 use App\Http\Controllers\DtrSubmissionController;
@@ -27,6 +30,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 Route::inertia('/terms', 'terms')->name('terms');
+Route::get('/verify/certificates/{certificateNumber}', CertificateVerificationController::class)
+    ->middleware('throttle:60,1')
+    ->name('certificates.verify');
 
 /*
 |--------------------------------------------------------------------------
@@ -76,13 +82,49 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(EnsurePasswordChanged::class)
         ->name('dtr-submissions.store');
 
+    Route::delete('dtr-submissions/{dtrSubmission}', [DtrSubmissionController::class, 'destroy'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('dtr-submissions.destroy');
+
+    Route::delete('company/dtr-submissions/{dtrSubmission}/finalized', [DtrSubmissionController::class, 'destroyFinalized'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('company.dtr-submissions.destroy-finalized');
+
     Route::patch('dtr-submissions/{dtrSubmission}/review', [DtrSubmissionController::class, 'review'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('dtr-submissions.review');
 
+    Route::get('dtr-submissions/{dtrSubmission}/print', [DtrSubmissionController::class, 'showPrintable'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('dtr-submissions.print');
+
+    Route::get('certificates', [CompletionCertificateController::class, 'index'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('certificates.index');
+
+    Route::post('certificates', [CompletionCertificateController::class, 'store'])
+        ->middleware(['throttle:10,1', EnsurePasswordChanged::class])
+        ->name('certificates.store');
+
+    Route::patch('certificates/{completionCertificate}/sign', [CompletionCertificateController::class, 'sign'])
+        ->middleware(['throttle:10,1', EnsurePasswordChanged::class])
+        ->name('certificates.sign');
+
+    Route::get('certificates/{completionCertificate}/print', [CompletionCertificateController::class, 'print'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('certificates.print');
+
+    Route::delete('certificates/{completionCertificate}', [CompletionCertificateController::class, 'destroy'])
+        ->middleware(['throttle:10,1', EnsurePasswordChanged::class])
+        ->name('certificates.destroy');
+
     Route::post('reports/time-in', [DailyReportController::class, 'timeIn'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('reports.time-in');
+
+    Route::post('reports/historical', [DailyReportController::class, 'storeHistorical'])
+        ->middleware(['throttle:10,1', EnsurePasswordChanged::class])
+        ->name('reports.historical.store');
 
     Route::post('reports/{dailyReport}/time-out', [DailyReportController::class, 'timeOut'])
         ->middleware(EnsurePasswordChanged::class)
@@ -143,6 +185,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('company/operations', [OperationsController::class, 'index'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('company.operations.index');
+
+    Route::get('company/analytics', OjtAnalyticsController::class)
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('company.analytics.index');
 
     Route::post('company/operations/backups', [OperationsController::class, 'backup'])
         ->middleware(['password.confirm', EnsurePasswordChanged::class])
@@ -260,6 +306,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('company/ojts/{ojt}/supervisor', [OjtController::class, 'updateSupervisor'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('company.ojts.update-supervisor');
+
+    Route::patch('company/ojts/{ojt}/start-date', [OjtController::class, 'updateStartDate'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('company.ojts.update-start-date');
 
     Route::delete('company/ojts/{ojt}', [OjtController::class, 'destroy'])
         ->middleware(EnsurePasswordChanged::class)

@@ -20,6 +20,19 @@ class DtrSubmissionFactory extends Factory
             'total_hours' => 8,
             'status' => DtrSubmission::STATUS_PENDING_SUPERVISOR,
             'submitted_at' => now(),
+            'student_signature_name' => fake()->name(),
+            'student_signature_strokes' => [
+                'version' => 1,
+                'strokes' => [[
+                    ['x' => 800, 'y' => 6_200],
+                    ['x' => 2_100, 'y' => 3_800],
+                    ['x' => 3_400, 'y' => 6_100],
+                    ['x' => 4_800, 'y' => 3_600],
+                    ['x' => 6_100, 'y' => 5_900],
+                    ['x' => 8_900, 'y' => 4_100],
+                ]],
+            ],
+            'student_signed_at' => now(),
         ];
     }
 }

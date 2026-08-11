@@ -1,18 +1,4 @@
 import { Link, usePage, usePoll } from '@inertiajs/react';
-import {
-    Bell,
-    ClipboardPlus,
-    CalendarSync,
-    LayoutGrid,
-    MessageCircle,
-    ListChecks,
-    UsersRound,
-    Clock8,
-    ScrollText,
-    CalendarDays,
-    FileCheck2,
-    ServerCog,
-} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -25,166 +11,63 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { roleNavigation } from '@/lib/role-navigation';
 import { dashboard } from '@/routes';
-import { index as attendanceCorrections } from '@/routes/attendance-corrections';
-import { index as activityLogs } from '@/routes/company/activity-logs';
-import { index as approvalInbox } from '@/routes/company/approvals';
-import { edit as attendancePolicy } from '@/routes/company/attendance-policy';
-import { index as managedOjtsIndex } from '@/routes/company/ojts';
-import { index as operationsIndex } from '@/routes/company/operations';
-import { index as dtrSubmissionsIndex } from '@/routes/dtr-submissions';
-import { index as leaveIndex } from '@/routes/leave';
-import { index as messagesIndex } from '@/routes/messages';
-import { index as notificationsIndex } from '@/routes/notifications';
-import { index as reportsIndex } from '@/routes/reports';
-import { dashboard as supervisorDashboard } from '@/routes/supervisor';
-import { index as tasksIndex } from '@/routes/tasks';
-import type { NavItem } from '@/types';
-
-const ojtNavItems: NavItem[] = [
-    {
-        title: 'Home',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Tasks',
-        href: tasksIndex(),
-        icon: ListChecks,
-    },
-    {
-        title: 'Attendance & Reports',
-        href: reportsIndex(),
-        icon: ClipboardPlus,
-    },
-    { title: 'Leave', href: leaveIndex(), icon: CalendarDays },
-    { title: 'DTR sign-off', href: dtrSubmissionsIndex(), icon: FileCheck2 },
-    {
-        title: 'Messages',
-        href: messagesIndex(),
-        icon: MessageCircle,
-    },
-];
-
-const supervisorNavItems: NavItem[] = [
-    {
-        title: 'My OJTs',
-        href: supervisorDashboard(),
-        icon: LayoutGrid,
-    },
-    { title: 'Leave requests', href: leaveIndex(), icon: CalendarDays },
-    { title: 'DTR sign-off', href: dtrSubmissionsIndex(), icon: FileCheck2 },
-    {
-        title: 'Messages',
-        href: messagesIndex(),
-        icon: MessageCircle,
-    },
-];
+import type { NavigationCounts } from '@/types';
 
 export function AppSidebar() {
     const { auth, navigation } = usePage<{
-        navigation: {
-            pendingReportsCount: number;
-            unreadNotificationsCount: number;
-            pendingCorrectionsCount: number;
-            unreadMessagesCount: number;
-        };
+        navigation: NavigationCounts;
     }>().props;
     usePoll(15_000, { only: ['navigation'] }, { mode: 'rest' });
-
-    const withMessageBadge = (item: NavItem): NavItem =>
-        item.title === 'Messages'
-            ? { ...item, badge: navigation.unreadMessagesCount }
-            : item;
-    const notificationsItem: NavItem = {
-        title: 'Notifications',
-        href: notificationsIndex(),
-        icon: Bell,
-        badge: navigation.unreadNotificationsCount,
-    };
-    const correctionsItem: NavItem = {
-        title: 'Time Corrections',
-        href: attendanceCorrections(),
-        icon: CalendarSync,
-        badge: navigation.pendingCorrectionsCount,
-    };
-    const companyNavItems: NavItem[] = [
-        {
-            title: 'Overview',
-            href: dashboard(),
-            icon: LayoutGrid,
-        },
-        {
-            title: 'Review Reports',
-            href: approvalInbox(),
-            icon: ListChecks,
-            badge: navigation.pendingReportsCount,
-        },
-        {
-            title: 'OJT Accounts',
-            href: managedOjtsIndex(),
-            icon: UsersRound,
-        },
-        {
-            title: 'Work Schedule',
-            href: attendancePolicy(),
-            icon: Clock8,
-        },
-        { title: 'Leave & Calendar', href: leaveIndex(), icon: CalendarDays },
-        {
-            title: 'DTR sign-off',
-            href: dtrSubmissionsIndex(),
-            icon: FileCheck2,
-        },
-        {
-            title: 'System Operations',
-            href: operationsIndex(),
-            icon: ServerCog,
-        },
-        {
-            title: 'Audit Trail',
-            href: activityLogs(),
-            icon: ScrollText,
-        },
-        correctionsItem,
-        notificationsItem,
-    ];
-    const mainNavItems =
-        auth.user.role === 'company_admin'
-            ? companyNavItems
-            : auth.user.role === 'supervisor'
-              ? [
-                    ...supervisorNavItems.map(withMessageBadge),
-                    correctionsItem,
-                    notificationsItem,
-                ]
-              : [
-                    ...ojtNavItems.map(withMessageBadge),
-                    correctionsItem,
-                    notificationsItem,
-                ];
+    const { sections } = roleNavigation(auth.user.role, navigation);
 
     return (
-        <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
+        <Sidebar
+            collapsible="icon"
+            variant="inset"
+            className="border-r border-sidebar-border/70 bg-sidebar/95 shadow-[18px_0_55px_-38px_color-mix(in_oklab,var(--primary)_60%,transparent)] backdrop-blur-xl"
+        >
+            <SidebarHeader className="relative p-3 pb-2 after:absolute after:inset-x-4 after:bottom-0 after:h-px after:bg-linear-to-r after:from-transparent after:via-sidebar-primary/35 after:to-transparent">
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
+                        <SidebarMenuButton
+                            size="lg"
+                            className="command-panel h-14 rounded-2xl border border-sidebar-primary/15 bg-sidebar-accent/35 px-3 transition-all hover:border-sidebar-primary/35 hover:bg-sidebar-accent"
+                            asChild
+                        >
                             <Link href={dashboard()} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
+                <div className="px-3 pt-2 group-data-[collapsible=icon]:hidden">
+                    <p className="text-[10px] font-semibold tracking-[0.14em] text-sidebar-foreground/45 uppercase">
+                        {workspaceLabel(auth.user.role)}
+                    </p>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-sidebar-foreground/65">
+                        <span className="status-pulse size-1.5 rounded-full bg-sidebar-primary" />
+                        Secure workspace
+                    </div>
+                </div>
             </SidebarHeader>
 
-            <SidebarContent>
-                <NavMain items={mainNavItems} />
+            <SidebarContent className="px-1 pb-2">
+                <NavMain sections={sections} />
             </SidebarContent>
 
-            <SidebarFooter>
+            <SidebarFooter className="border-t border-sidebar-border/70 bg-sidebar-accent/10 p-2">
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
     );
+}
+
+function workspaceLabel(role: 'company_admin' | 'supervisor' | 'ojt'): string {
+    return role === 'company_admin'
+        ? 'Company workspace'
+        : role === 'supervisor'
+          ? 'Supervisor workspace'
+          : 'OJT workspace';
 }

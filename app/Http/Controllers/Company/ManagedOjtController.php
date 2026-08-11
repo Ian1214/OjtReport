@@ -39,6 +39,7 @@ class ManagedOjtController extends Controller
                 'supervisor_id',
                 'supervisor_name',
                 'required_hours',
+                'start_date',
                 'end_date',
                 'last_seen_at',
             ])
@@ -80,6 +81,7 @@ class ManagedOjtController extends Controller
                     'supervisorName' => $ojt->supervisor_name,
                     'supervisorId' => $ojt->supervisor_id,
                     'requiredHours' => $ojt->required_hours,
+                    'startDate' => $ojt->start_date?->toDateString(),
                     'completedHours' => (float) ($ojt->approved_daily_reports_sum_total_hours ?? 0),
                     'hoursLeft' => max(0, (float) $ojt->required_hours - (float) ($ojt->approved_daily_reports_sum_total_hours ?? 0)),
                     'isComplete' => $ojt->end_date !== null,

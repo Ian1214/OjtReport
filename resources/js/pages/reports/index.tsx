@@ -5,6 +5,7 @@ import {
     Clock3,
     Copy,
     FileText,
+    History,
     LogIn,
     LogOut,
     Pencil,
@@ -12,7 +13,9 @@ import {
     Trash2,
     XCircle,
 } from 'lucide-react';
+import { useState } from 'react';
 import { store as storeCorrection } from '@/actions/App/Http/Controllers/AttendanceCorrectionController';
+import { storeHistorical } from '@/actions/App/Http/Controllers/DailyReportController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +34,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { useClipboard } from '@/hooks/use-clipboard';
@@ -59,6 +63,7 @@ type DailyReport = {
     scheduled_time_in: string | null;
     attendance_status: 'on_time' | 'late' | null;
     late_minutes: number | null;
+    is_historical: boolean;
 };
 
 type ActiveReport = {
@@ -78,12 +83,18 @@ type Props = {
         workStartTime: string;
         graceMinutes: number;
     };
+    historicalEntry: {
+        earliestDate: string | null;
+        latestDate: string;
+        enabled: boolean;
+    };
 };
 
 export default function ReportsIndex({
     reports,
     activeReport,
     attendancePolicy,
+    historicalEntry,
 }: Props) {
     const { auth } = usePage<{ auth: { user: User } }>().props;
     const [copiedText, copy] = useClipboard();
@@ -144,6 +155,8 @@ export default function ReportsIndex({
                     </CardContent>
                 </Card>
 
+                <HistoricalReportCard availability={historicalEntry} />
+
                 <section className="grid gap-4">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                         <div>
@@ -199,6 +212,12 @@ export default function ReportsIndex({
                                             <ReportStatusBadge
                                                 status={report.approval_status}
                                             />
+                                            {report.is_historical && (
+                                                <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/25 bg-primary/8 px-2.5 text-xs font-semibold text-primary">
+                                                    <History className="size-3.5" />
+                                                    Past entry
+                                                </span>
+                                            )}
                                             <PunctualityBadge report={report} />
                                             <Button
                                                 type="button"
@@ -301,6 +320,163 @@ export default function ReportsIndex({
                 </section>
             </div>
         </>
+    );
+}
+
+function HistoricalReportCard({
+    availability,
+}: {
+    availability: Props['historicalEntry'];
+}) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <Card className="overflow-hidden border-primary/20 bg-primary/3">
+            <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="flex items-start gap-3">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+                        <History className="size-5" />
+                    </span>
+                    <div>
+                        <p className="font-semibold">Add a previous workday</p>
+                        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                            Use this when you started OJT before your account
+                            was created. Enter the real attendance and work
+                            summary; the hours count only after company
+                            approval.
+                        </p>
+                    </div>
+                </div>
+
+                <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogTrigger asChild>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full shrink-0 sm:w-auto"
+                            disabled={!availability.enabled}
+                        >
+                            <History />
+                            Add past workday
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+                        <DialogTitle>Add a previous workday</DialogTitle>
+                        <DialogDescription>
+                            Dates must be between your official start date and
+                            yesterday. Duplicate dates and submitted DTR periods
+                            are protected.
+                        </DialogDescription>
+                        <Form
+                            {...storeHistorical.form()}
+                            resetOnSuccess
+                            onSuccess={() => setOpen(false)}
+                        >
+                            {({ errors, processing }) => (
+                                <div className="mt-4 grid gap-5">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="historical-report-date">
+                                            Work date
+                                        </Label>
+                                        <Input
+                                            id="historical-report-date"
+                                            name="report_date"
+                                            type="date"
+                                            min={
+                                                availability.earliestDate ??
+                                                undefined
+                                            }
+                                            max={availability.latestDate}
+                                            defaultValue={
+                                                availability.latestDate
+                                            }
+                                            required
+                                        />
+                                        <InputError
+                                            message={errors.report_date}
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="historical-time-in">
+                                                Time in
+                                            </Label>
+                                            <Input
+                                                id="historical-time-in"
+                                                name="time_in"
+                                                type="time"
+                                                defaultValue="08:00"
+                                                required
+                                            />
+                                            <InputError
+                                                message={errors.time_in}
+                                            />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="historical-time-out">
+                                                Time out
+                                            </Label>
+                                            <Input
+                                                id="historical-time-out"
+                                                name="time_out"
+                                                type="time"
+                                                defaultValue="17:00"
+                                                required
+                                            />
+                                            <InputError
+                                                message={errors.time_out}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="historical-summary">
+                                            Summary of the Day&apos;s Work
+                                        </Label>
+                                        <textarea
+                                            id="historical-summary"
+                                            name="summary"
+                                            rows={7}
+                                            required
+                                            maxLength={5000}
+                                            placeholder="Describe the tasks completed on this workday."
+                                            className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                        />
+                                        <InputError message={errors.summary} />
+                                    </div>
+
+                                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/6 p-3 text-sm text-muted-foreground">
+                                        Enter only verified attendance. The
+                                        company administrator will review this
+                                        entry before its hours are included in
+                                        your DTR.
+                                    </div>
+
+                                    <DialogFooter className="gap-2">
+                                        <DialogClose asChild>
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </DialogClose>
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            {processing && <Spinner />}
+                                            Submit for approval
+                                        </Button>
+                                    </DialogFooter>
+                                </div>
+                            )}
+                        </Form>
+                    </DialogContent>
+                </Dialog>
+            </CardContent>
+        </Card>
     );
 }
 

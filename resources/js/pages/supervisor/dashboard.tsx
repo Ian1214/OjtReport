@@ -13,6 +13,11 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { store } from '@/actions/App/Http/Controllers/SupervisorTaskController';
+import {
+    EmptyState,
+    NextActionCard,
+    StatusBadge,
+} from '@/components/dashboard-ui';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,6 +67,8 @@ export default function SupervisorDashboard({ ojts }: { ojts: Ojt[] }) {
         0,
     );
     const onlineCount = ojts.filter((ojt) => ojt.isOnline).length;
+    const priorityOjt =
+        ojts.find((ojt) => ojt.unreadCount > 0) ?? ojts.at(0) ?? null;
 
     usePoll(15_000, { only: ['ojts', 'navigation'] }, { mode: 'rest' });
 
@@ -101,28 +108,82 @@ export default function SupervisorDashboard({ ojts }: { ojts: Ojt[] }) {
                         </Button>
                     </header>
 
-                    {navigation.unreadMessagesCount > 0 && (
-                        <Link
-                            href={messagesIndex()}
-                            className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/6 p-4 transition-colors hover:bg-primary/10"
-                        >
-                            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                                <MessageCircle className="size-5" />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                                <span className="block font-semibold">
-                                    {navigation.unreadMessagesCount} unread{' '}
-                                    {navigation.unreadMessagesCount === 1
-                                        ? 'message'
-                                        : 'messages'}
-                                </span>
-                                <span className="block text-sm text-muted-foreground">
-                                    An OJT may be waiting for your response.
-                                </span>
-                            </span>
-                            <ArrowRight className="size-4 shrink-0 text-primary" />
-                        </Link>
-                    )}
+                    <NextActionCard
+                        icon={
+                            navigation.unreadMessagesCount > 0
+                                ? MessageCircle
+                                : ojts.length === 0
+                                  ? UsersRound
+                                  : ClipboardList
+                        }
+                        title={
+                            navigation.unreadMessagesCount > 0
+                                ? `${navigation.unreadMessagesCount} unread ${navigation.unreadMessagesCount === 1 ? 'message' : 'messages'}`
+                                : ojts.length === 0
+                                  ? 'Waiting for an OJT assignment'
+                                  : openTaskCount > 0
+                                    ? `${openTaskCount} open ${openTaskCount === 1 ? 'task' : 'tasks'} to monitor`
+                                    : 'Your OJT team is on track'
+                        }
+                        description={
+                            navigation.unreadMessagesCount > 0
+                                ? 'An OJT may be waiting for your guidance. Open the conversation to respond.'
+                                : ojts.length === 0
+                                  ? 'A company administrator needs to assign an OJT before you can manage tasks and reports.'
+                                  : openTaskCount > 0
+                                    ? 'Open an OJT workspace to review progress, assign work, or check submitted reports.'
+                                    : 'There are no open tasks. Check in with your assigned OJTs when needed.'
+                        }
+                        tone={
+                            navigation.unreadMessagesCount > 0
+                                ? 'warning'
+                                : ojts.length === 0
+                                  ? 'primary'
+                                  : 'success'
+                        }
+                        status={
+                            <StatusBadge
+                                status={
+                                    navigation.unreadMessagesCount > 0
+                                        ? 'pending'
+                                        : ojts.length === 0
+                                          ? 'not_started'
+                                          : openTaskCount > 0
+                                            ? 'ongoing'
+                                            : 'approved'
+                                }
+                                label={
+                                    navigation.unreadMessagesCount > 0
+                                        ? 'Response needed'
+                                        : ojts.length === 0
+                                          ? 'Assignment needed'
+                                          : openTaskCount > 0
+                                            ? 'Work in progress'
+                                            : 'All clear'
+                                }
+                            />
+                        }
+                        action={
+                            navigation.unreadMessagesCount > 0 ? (
+                                <Button variant="outline" asChild>
+                                    <Link href={messagesIndex()}>
+                                        Open messages
+                                        <ArrowRight />
+                                    </Link>
+                                </Button>
+                            ) : priorityOjt ? (
+                                <Button
+                                    variant="outline"
+                                    onClick={() =>
+                                        setExpandedOjtId(priorityOjt.id)
+                                    }
+                                >
+                                    Open OJT workspace
+                                    <ArrowRight />
+                                </Button>
+                            ) : undefined
+                        }
+                    />
 
                     <div className="grid gap-3 sm:grid-cols-3">
                         <SummaryCard
@@ -162,16 +223,12 @@ export default function SupervisorDashboard({ ojts }: { ojts: Ojt[] }) {
                         </div>
 
                         {ojts.length === 0 ? (
-                            <div className="mt-4 rounded-3xl border border-dashed bg-card/70 p-10 text-center">
-                                <UsersRound className="mx-auto size-8 text-primary" />
-                                <p className="mt-3 font-semibold">
-                                    No OJTs assigned yet
-                                </p>
-                                <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-                                    Ask the company administrator to assign an
-                                    OJT to your supervisor account.
-                                </p>
-                            </div>
+                            <EmptyState
+                                icon={UsersRound}
+                                title="No OJTs assigned yet"
+                                description="Ask the company administrator to assign an OJT to your supervisor account."
+                                className="mt-4"
+                            />
                         ) : (
                             <div className="mt-4 grid items-start gap-4 xl:grid-cols-2">
                                 {ojts.map((ojt) => (
@@ -246,9 +303,9 @@ function OjtCard({
                             <h3 className="truncate text-lg font-semibold">
                                 {ojt.name}
                             </h3>
-                            <Badge variant="outline">
-                                {ojt.isOnline ? 'Online' : 'Offline'}
-                            </Badge>
+                            <StatusBadge
+                                status={ojt.isOnline ? 'online' : 'offline'}
+                            />
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">
                             {ojt.position ?? 'OJT Intern'} ·{' '}
@@ -343,15 +400,7 @@ function OjtCard({
                                                 </p>
                                             )}
                                         </div>
-                                        <Badge
-                                            variant={
-                                                task.status === 'finished'
-                                                    ? 'default'
-                                                    : 'secondary'
-                                            }
-                                        >
-                                            {formatStatus(task.status)}
-                                        </Badge>
+                                        <StatusBadge status={task.status} />
                                     </div>
                                     {task.dueDate && (
                                         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -453,14 +502,6 @@ function SummaryCard({
             </div>
         </div>
     );
-}
-
-function formatStatus(status: Task['status']): string {
-    return status === 'not_started'
-        ? 'Not started'
-        : status === 'ongoing'
-          ? 'Ongoing'
-          : 'Finished';
 }
 
 function formatDate(date: string): string {

@@ -16,12 +16,23 @@ export type User = {
     start_date: string | null;
     end_date: string | null;
     email: string;
+    timezone: string;
+    preferences: Partial<UserPreferences> | null;
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;
+};
+
+export type UserPreferences = {
+    date_format: 'month_first' | 'day_first' | 'iso';
+    interface_density: 'comfortable' | 'compact';
+    reduce_motion: boolean;
+    high_contrast: boolean;
+    report_updates: boolean;
+    attendance_updates: boolean;
 };
 
 export type Auth = {

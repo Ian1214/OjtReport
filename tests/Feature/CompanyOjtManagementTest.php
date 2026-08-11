@@ -60,6 +60,52 @@ test('a company administrator can assign a supervisor to an OJT', function () {
     expect($ojt->refresh()->supervisor_name)->toBe('Maria Cruz');
 });
 
+test('a company administrator can correct an OJT internship start date', function () {
+    $company = Company::factory()->create();
+    $companyAdmin = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'role' => 'company_admin',
+    ]);
+    $ojt = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'start_date' => '2026-08-10',
+    ]);
+
+    $this->actingAs($companyAdmin)
+        ->patch(route('company.ojts.update-start-date', $ojt), [
+            'start_date' => '2026-08-04',
+        ])
+        ->assertRedirect(route('company.ojts.index', absolute: false))
+        ->assertInertiaFlash('toast.type', 'success');
+
+    expect($ojt->refresh()->start_date->toDateString())->toBe('2026-08-04');
+});
+
+test('an OJT start date cannot be moved after existing attendance', function () {
+    $company = Company::factory()->create();
+    $companyAdmin = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'role' => 'company_admin',
+    ]);
+    $ojt = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'start_date' => '2026-08-04',
+    ]);
+    DailyReport::factory()->for($ojt)->create(['report_date' => '2026-08-05']);
+
+    $this->actingAs($companyAdmin)
+        ->patch(route('company.ojts.update-start-date', $ojt), [
+            'start_date' => '2026-08-06',
+        ])
+        ->assertSessionHasErrors('start_date');
+
+    expect($ojt->refresh()->start_date->toDateString())->toBe('2026-08-04');
+});
+
 test('a company administrator can resend an OJT password setup link', function () {
     Notification::fake();
 

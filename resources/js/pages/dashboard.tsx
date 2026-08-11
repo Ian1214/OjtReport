@@ -11,7 +11,11 @@ import {
     Play,
 } from 'lucide-react';
 import { timeIn } from '@/actions/App/Http/Controllers/DailyReportController';
-import { Badge } from '@/components/ui/badge';
+import {
+    EmptyState,
+    NextActionCard,
+    StatusBadge,
+} from '@/components/dashboard-ui';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
@@ -92,12 +96,13 @@ export default function Dashboard({
                                 Here is what you need to do today.
                             </p>
                         </div>
-                        <Badge
-                            variant={isComplete ? 'default' : 'secondary'}
-                            className="w-fit px-3 py-1"
-                        >
-                            {isComplete ? 'OJT completed' : 'OJT in progress'}
-                        </Badge>
+                        <StatusBadge
+                            status={isComplete ? 'completed' : 'in_progress'}
+                            label={
+                                isComplete ? 'OJT completed' : 'OJT in progress'
+                            }
+                            className="px-3 py-1"
+                        />
                     </header>
 
                     <div className="grid items-stretch gap-5 lg:grid-cols-[1.35fr_0.65fr]">
@@ -128,16 +133,12 @@ export default function Dashboard({
 
                             <div className="grid gap-3 p-4 sm:p-5">
                                 {tasks.length === 0 ? (
-                                    <div className="rounded-2xl border border-dashed p-6 text-center">
-                                        <CheckCircle2 className="mx-auto size-7 text-primary" />
-                                        <p className="mt-2 text-sm font-medium">
-                                            You are all caught up
-                                        </p>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            New assignments from your supervisor
-                                            will appear here.
-                                        </p>
-                                    </div>
+                                    <EmptyState
+                                        icon={CheckCircle2}
+                                        title="You are all caught up"
+                                        description="New assignments from your supervisor will appear here."
+                                        compact
+                                    />
                                 ) : (
                                     tasks.map((task) => (
                                         <Link
@@ -145,19 +146,16 @@ export default function Dashboard({
                                             href={tasksIndex()}
                                             className="flex items-start gap-3 rounded-2xl border bg-background/70 p-4 transition-colors hover:border-primary/25 hover:bg-primary/4"
                                         >
-                                            <span
-                                                className={`mt-0.5 size-2.5 shrink-0 rounded-full ${task.status === 'ongoing' ? 'bg-primary' : 'bg-amber-500'}`}
-                                            />
                                             <span className="min-w-0 flex-1">
                                                 <span className="block font-medium">
                                                     {task.title}
                                                 </span>
-                                                <span className="mt-1 block text-xs text-muted-foreground">
-                                                    {task.status === 'ongoing'
-                                                        ? 'Ongoing'
-                                                        : 'Not started'}
+                                                <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                                    <StatusBadge
+                                                        status={task.status}
+                                                    />
                                                     {task.dueDate
-                                                        ? ` · Due ${formatDate(task.dueDate)}`
+                                                        ? `Due ${formatDate(task.dueDate)}`
                                                         : ''}
                                                 </span>
                                             </span>
@@ -228,72 +226,126 @@ function TodayCard({
     const content = todayContent(today, isComplete);
 
     return (
-        <section className="relative overflow-hidden rounded-3xl border border-primary/20 bg-card p-5 shadow-[0_24px_70px_-42px_color-mix(in_oklab,var(--primary)_65%,transparent)] sm:p-7">
-            <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-primary via-emerald-400 to-transparent" />
-            <div className="flex items-start gap-4">
-                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary sm:size-14">
-                    <content.icon className="size-6" />
-                </span>
-                <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">
-                        Today
-                    </p>
-                    <h2 className="mt-1 text-xl font-semibold sm:text-2xl">
-                        {content.title}
-                    </h2>
-                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                        {content.description}
-                    </p>
-
-                    {(today.timeIn || today.timeOut) && (
-                        <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium">
-                            {today.timeIn && (
-                                <span className="rounded-full bg-muted px-3 py-1.5">
-                                    Time in · {formatTime(today.timeIn)}
-                                </span>
-                            )}
-                            {today.timeOut && (
-                                <span className="rounded-full bg-muted px-3 py-1.5">
-                                    Time out · {formatTime(today.timeOut)}
-                                </span>
-                            )}
-                        </div>
-                    )}
-
-                    <div className="mt-5">
-                        {today.status === 'not_started' && !isComplete ? (
-                            <Form {...timeIn.form()}>
-                                {({ processing }) => (
-                                    <Button
-                                        type="submit"
-                                        size="lg"
-                                        disabled={processing}
-                                        className="w-full sm:w-auto"
-                                    >
-                                        {processing ? <Spinner /> : <Play />}
-                                        {processing
-                                            ? 'Recording time…'
-                                            : 'Time in now'}
-                                    </Button>
-                                )}
-                            </Form>
-                        ) : (
-                            <Button
-                                size="lg"
-                                asChild
-                                className="w-full sm:w-auto"
-                            >
-                                <Link href={reportsIndex()}>
-                                    {content.action}
-                                    <ArrowRight />
-                                </Link>
-                            </Button>
+        <NextActionCard
+            icon={content.icon}
+            eyebrow="Today · Next action"
+            title={content.title}
+            description={content.description}
+            tone={todayTone(today, isComplete)}
+            status={
+                <StatusBadge
+                    status={todayStatus(today, isComplete)}
+                    label={todayStatusLabel(today, isComplete)}
+                />
+            }
+            details={
+                (today.timeIn || today.timeOut) && (
+                    <div className="flex flex-wrap gap-2 text-xs font-medium text-foreground">
+                        {today.timeIn && (
+                            <span className="rounded-full bg-background/60 px-3 py-1.5">
+                                Time in · {formatTime(today.timeIn)}
+                            </span>
+                        )}
+                        {today.timeOut && (
+                            <span className="rounded-full bg-background/60 px-3 py-1.5">
+                                Time out · {formatTime(today.timeOut)}
+                            </span>
                         )}
                     </div>
-                </div>
-            </div>
-        </section>
+                )
+            }
+            action={
+                today.status === 'not_started' && !isComplete ? (
+                    <Form {...timeIn.form()}>
+                        {({ processing }) => (
+                            <Button
+                                type="submit"
+                                size="lg"
+                                disabled={processing}
+                                className="w-full sm:w-auto"
+                            >
+                                {processing ? <Spinner /> : <Play />}
+                                {processing ? 'Recording time…' : 'Time in now'}
+                            </Button>
+                        )}
+                    </Form>
+                ) : (
+                    <Button size="lg" asChild className="w-full sm:w-auto">
+                        <Link href={reportsIndex()}>
+                            {content.action}
+                            <ArrowRight />
+                        </Link>
+                    </Button>
+                )
+            }
+        />
     );
+}
+
+function todayStatus(
+    today: Today,
+    isComplete: boolean,
+):
+    | 'completed'
+    | 'timed_in'
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'not_started' {
+    if (isComplete) {
+        return 'completed';
+    }
+
+    if (today.status === 'timed_in') {
+        return 'timed_in';
+    }
+
+    if (today.status === 'summary_due') {
+        return 'pending';
+    }
+
+    if (today.status === 'submitted') {
+        return today.approvalStatus ?? 'pending';
+    }
+
+    return 'not_started';
+}
+
+function todayStatusLabel(today: Today, isComplete: boolean): string {
+    const status = todayStatus(today, isComplete);
+
+    if (isComplete) {
+        return 'Hours completed';
+    }
+
+    if (today.status === 'summary_due') {
+        return 'Summary needed';
+    }
+
+    if (today.status === 'not_started') {
+        return 'Not timed in';
+    }
+
+    if (status === 'pending') {
+        return 'Awaiting review';
+    }
+
+    return status.replace('_', ' ');
+}
+
+function todayTone(
+    today: Today,
+    isComplete: boolean,
+): 'primary' | 'success' | 'warning' {
+    if (isComplete || today.approvalStatus === 'approved') {
+        return 'success';
+    }
+
+    if (today.status === 'summary_due' || today.approvalStatus === 'rejected') {
+        return 'warning';
+    }
+
+    return 'primary';
 }
 
 function ProgressCard({ progress }: { progress: Progress }) {

@@ -46,6 +46,7 @@ class ReportApprovalInboxController extends Controller
                 'scheduled_time_in',
                 'attendance_status',
                 'late_minutes',
+                'created_at',
             ])
             ->with([
                 'user:id,name,student_id,department,position,supervisor_id',
@@ -103,6 +104,7 @@ class ReportApprovalInboxController extends Controller
                 'scheduledTimeIn' => $report->scheduled_time_in,
                 'attendanceStatus' => $report->attendance_status,
                 'lateMinutes' => $report->late_minutes,
+                'isHistorical' => ! $report->created_at->isSameDay($report->report_date),
                 'ojt' => [
                     'id' => $report->user->id,
                     'name' => $report->user->name,
