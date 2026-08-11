@@ -74,6 +74,9 @@ jobs:
       - name: Validate database migrations
         run: php artisan migrate:fresh --force
 
+      - name: Generate Wayfinder types
+        run: php artisan wayfinder:generate --with-form --no-interaction
+
       - name: Run CI Checks
         run: composer ci:check
 
