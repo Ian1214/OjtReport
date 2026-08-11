@@ -96,7 +96,23 @@ jobs:
         run: composer types:check
 
       - name: Run application tests
-        run: php artisan test --compact
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          php artisan test --compact 2>&1 | tee "${RUNNER_TEMP}/application-tests.log"
+          test_status=${PIPESTATUS[0]}
+          set -e
+
+          if (( test_status != 0 )); then
+            failure_output="$(tail -n 60 "${RUNNER_TEMP}/application-tests.log")"
+            failure_output="${failure_output//'%'/'%25'}"
+            failure_output="${failure_output//$'\r'/'%0D'}"
+            failure_output="${failure_output//$'\n'/'%0A'}"
+            echo "::error title=Application test failure::${failure_output}"
+          fi
+
+          exit "${test_status}"
 
       - name: Report strict static-analysis debt
         continue-on-error: true
