@@ -93,7 +93,9 @@ class Company extends Model
 
     public function isWorkDay(\DateTimeInterface $date): bool
     {
-        $workDays = $this->work_days ?? [1, 2, 3, 4, 5];
+        /** @var list<int|string> $configuredWorkDays */
+        $configuredWorkDays = $this->work_days ?? [1, 2, 3, 4, 5];
+        $workDays = array_map(static fn (int|string $day): int => (int) $day, $configuredWorkDays);
         $dayOfWeek = (int) $date->format('N');
 
         return in_array($dayOfWeek, $workDays, true)

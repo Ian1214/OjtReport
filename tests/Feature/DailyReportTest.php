@@ -27,6 +27,25 @@ test('an OJT can time in using the current system time', function () {
         ->late_minutes->toBe(31);
 });
 
+test('an OJT can time in when configured work days are stored as strings', function () {
+    Carbon::setTestNow('2026-08-13 08:30:15');
+    $company = Company::factory()->create([
+        'work_days' => ['1', '2', '3', '4', '5'],
+    ]);
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('reports.time-in'))
+        ->assertRedirect(route('reports.index', absolute: false));
+
+    expect($user->dailyReports()->firstOrFail())
+        ->report_date->toDateString()->toBe('2026-08-13')
+        ->time_in->toBe('08:30:15');
+});
+
 test('an OJT can submit a previous workday for company approval', function () {
     Carbon::setTestNow('2026-08-11 10:00:00');
     $company = Company::factory()->create();

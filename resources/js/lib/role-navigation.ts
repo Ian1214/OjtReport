@@ -1,6 +1,7 @@
 import {
     Bell,
     Award,
+    CalendarCheck2,
     CalendarDays,
     CalendarSync,
     ChartNoAxesCombined,
@@ -19,11 +20,13 @@ import {
 } from 'lucide-react';
 import { dashboard } from '@/routes';
 import { edit as appearanceSettings } from '@/routes/appearance';
+import { index as attendanceCalendar } from '@/routes/attendance-calendar';
 import { index as attendanceCorrections } from '@/routes/attendance-corrections';
 import { index as certificatesIndex } from '@/routes/certificates';
 import { index as activityLogs } from '@/routes/company/activity-logs';
 import { index as analyticsIndex } from '@/routes/company/analytics';
 import { index as approvalInbox } from '@/routes/company/approvals';
+import { index as attendanceMonitorIndex } from '@/routes/company/attendance-monitor';
 import { edit as attendancePolicy } from '@/routes/company/attendance-policy';
 import { index as managedOjtsIndex } from '@/routes/company/ojts';
 import { index as operationsIndex } from '@/routes/company/operations';
@@ -116,6 +119,18 @@ export function roleNavigation(
             href: analyticsIndex(),
             icon: ChartNoAxesCombined,
         };
+        const attendanceMonitor: NavItem = {
+            title: 'Attendance Monitor',
+            mobileTitle: 'Attendance',
+            href: attendanceMonitorIndex(),
+            icon: CalendarCheck2,
+        };
+        const workCalendar: NavItem = {
+            title: 'Work Calendar',
+            mobileTitle: 'Calendar',
+            href: attendanceCalendar(),
+            icon: CalendarDays,
+        };
 
         return {
             sections: [
@@ -130,6 +145,8 @@ export function roleNavigation(
                 {
                     title: 'Attendance',
                     items: [
+                        attendanceMonitor,
+                        workCalendar,
                         {
                             title: 'Work Schedule',
                             href: attendancePolicy(),
@@ -159,11 +176,16 @@ export function roleNavigation(
                 },
                 { title: 'Updates', items: [notifications] },
             ],
-            primaryItems: [dashboardItem, ojtAccounts, reviews, notifications],
+            primaryItems: [
+                dashboardItem,
+                attendanceMonitor,
+                reviews,
+                notifications,
+            ],
             moreSections: [
                 {
                     title: 'Workspace',
-                    items: [analytics],
+                    items: [ojtAccounts, analytics],
                 },
                 {
                     title: 'Review & Approval',
@@ -172,6 +194,7 @@ export function roleNavigation(
                 {
                     title: 'Attendance',
                     items: [
+                        workCalendar,
                         {
                             title: 'Work Schedule',
                             href: attendancePolicy(),
@@ -275,10 +298,16 @@ export function roleNavigation(
         href: dtrSubmissionsIndex(),
         icon: FileCheck2,
     };
+    const calendar: NavItem = {
+        title: 'Attendance Calendar',
+        mobileTitle: 'Calendar',
+        href: attendanceCalendar(),
+        icon: CalendarDays,
+    };
 
     return {
         sections: [
-            { title: 'Today', items: [dashboardItem, dailyReports] },
+            { title: 'Today', items: [dashboardItem, dailyReports, calendar] },
             { title: 'Workspace', items: [tasks, messages] },
             {
                 title: 'Records',
@@ -291,11 +320,12 @@ export function roleNavigation(
             },
             { title: 'Updates', items: [notifications] },
         ],
-        primaryItems: [dashboardItem, dailyReports, tasks, messages],
+        primaryItems: [dashboardItem, dailyReports, calendar, messages],
         moreSections: [
             {
                 title: 'Records',
                 items: [
+                    tasks,
                     dtrSignOff,
                     certificates,
                     corrections,

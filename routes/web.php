@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\AttendanceCalendarController;
 use App\Http\Controllers\AttendanceCorrectionController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\Company\ActivityLogController;
+use App\Http\Controllers\Company\AttendanceMonitorController;
 use App\Http\Controllers\Company\AttendancePolicyController;
 use App\Http\Controllers\Company\CompanyHolidayController;
 use App\Http\Controllers\Company\DailyReportReviewController;
@@ -178,6 +180,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(EnsurePasswordChanged::class)
         ->name('company.attendance-policy.update');
 
+    Route::get('company/attendance-monitor', [AttendanceMonitorController::class, 'index'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('company.attendance-monitor.index');
+
+    Route::get('company/attendance-monitor/export', [AttendanceMonitorController::class, 'export'])
+        ->middleware(['throttle:10,1', EnsurePasswordChanged::class])
+        ->name('company.attendance-monitor.export');
+
     Route::get('company/activity-logs', ActivityLogController::class)
         ->middleware(EnsurePasswordChanged::class)
         ->name('company.activity-logs.index');
@@ -229,6 +239,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('leave/{leaveRequest}/review', [LeaveRequestController::class, 'review'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('leave.review');
+
+    Route::get('attendance-calendar', AttendanceCalendarController::class)
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('attendance-calendar.index');
 
     Route::post('company/holidays', [CompanyHolidayController::class, 'store'])
         ->middleware(EnsurePasswordChanged::class)
