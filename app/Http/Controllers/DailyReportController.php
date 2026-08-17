@@ -6,10 +6,13 @@ use App\Actions\RecordActivity;
 use App\Http\Requests\CompleteDailyReportRequest;
 use App\Http\Requests\StoreDailyReportRequest;
 use App\Http\Requests\UpdateDailyReportRequest;
+use App\Http\Requests\VerifyAttendanceRequest;
+use App\Models\Company;
 use App\Models\DailyReport;
 use App\Models\LeaveRequest;
 use App\Models\User;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,11 +32,13 @@ class DailyReportController extends Controller
         $user = $request->user();
 
         Gate::authorize('viewAny', DailyReport::class);
+        $attendanceSchedule = $this->attendanceSchedule($user);
 
         return Inertia::render('reports/index', [
             'attendancePolicy' => [
-                'workStartTime' => $user->companyRecord?->work_start_time ?? '08:00:00',
-                'graceMinutes' => $user->companyRecord?->late_grace_minutes ?? 0,
+                'workStartTime' => $attendanceSchedule['workStartTime'],
+                'graceMinutes' => $attendanceSchedule['graceMinutes'],
+                'verificationMode' => $user->companyRecord?->attendance_verification_mode ?? 'disabled',
             ],
             'reports' => $user->dailyReports()
                 ->with(['latestCorrectionRequest' => fn ($query) => $query->select([
@@ -93,7 +98,19 @@ class DailyReportController extends Controller
         ]);
     }
 
-    public function timeIn(Request $request, RecordActivity $recordActivity): RedirectResponse
+    public function scanAttendance(Request $request, Company $company): RedirectResponse
+    {
+        abort_unless($request->hasValidSignature(), 403);
+        /** @var User $user */
+        $user = $request->user();
+        abort_unless($user->role === 'ojt' && $user->company_id === $company->id, 403);
+
+        $request->session()->put('attendance_qr_verified_at', now()->timestamp);
+
+        return to_route('reports.index');
+    }
+
+    public function timeIn(VerifyAttendanceRequest $request, RecordActivity $recordActivity): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -114,8 +131,11 @@ class DailyReportController extends Controller
 
         $company = $user->companyRecord;
         $timeIn = now($company?->timezone ?? config('app.timezone'));
+        $attendanceSchedule = $this->attendanceSchedule($user);
 
-        if ($company !== null && ! $company->isWorkDay($timeIn)) {
+        $verification = $this->attendanceVerification($request, $company);
+
+        if ($company !== null && ! $this->isWorkDay($user, $timeIn)) {
             throw ValidationException::withMessages([
                 'attendance' => 'Today is not a scheduled work day. Ask your administrator if attendance should be enabled.',
             ]);
@@ -132,19 +152,21 @@ class DailyReportController extends Controller
         }
         $scheduledTimeIn = Carbon::createFromFormat(
             'Y-m-d H:i:s',
-            $timeIn->toDateString().' '.($company?->work_start_time ?? '08:00:00'),
+            $timeIn->toDateString().' '.$attendanceSchedule['workStartTime'],
+            $company?->timezone ?? config('app.timezone'),
         );
         $punctuality = DailyReport::classifyPunctuality(
             $timeIn,
             $scheduledTimeIn,
-            $company?->late_grace_minutes ?? 0,
+            $attendanceSchedule['graceMinutes'],
         );
 
         $report = $user->dailyReports()->create([
             'report_date' => $timeIn->toDateString(),
             'time_in' => $timeIn->format('H:i:s'),
+            ...$verification,
             'scheduled_time_in' => $scheduledTimeIn->format('H:i:s'),
-            'scheduled_grace_minutes' => $company?->late_grace_minutes ?? 0,
+            'scheduled_grace_minutes' => $attendanceSchedule['graceMinutes'],
             ...$punctuality,
         ]);
 
@@ -159,6 +181,70 @@ class DailyReportController extends Controller
         return to_route('reports.index');
     }
 
+    /** @return array<string, int|float|string|null> */
+    private function attendanceVerification(VerifyAttendanceRequest $request, ?Company $company): array
+    {
+        $mode = $company?->attendance_verification_mode ?? 'disabled';
+
+        if ($mode === 'disabled') {
+            return ['verification_method' => null, 'verified_at' => null];
+        }
+
+        if (in_array($mode, ['qr', 'qr_and_geolocation'], true)) {
+            $verifiedAt = (int) $request->session()->pull('attendance_qr_verified_at', 0);
+            if ($verifiedAt < now()->subMinutes(10)->timestamp) {
+                throw ValidationException::withMessages(['attendance' => 'Scan the current company QR code before timing in.']);
+            }
+        }
+
+        $result = [
+            'verification_method' => $mode,
+            'verified_at' => now(),
+            'verification_latitude' => null,
+            'verification_longitude' => null,
+            'verification_distance_meters' => null,
+        ];
+
+        if (in_array($mode, ['geolocation', 'qr_and_geolocation'], true)) {
+            if (! $request->boolean('location_consent')) {
+                throw ValidationException::withMessages(['location_consent' => 'Consent is required before location verification.']);
+            }
+
+            if ($request->validated('latitude') === null || $request->validated('longitude') === null) {
+                throw ValidationException::withMessages(['attendance' => 'Share your current location to verify attendance.']);
+            }
+            $latitude = (float) $request->validated('latitude');
+            $longitude = (float) $request->validated('longitude');
+            $distance = $this->distanceInMeters(
+                $latitude,
+                $longitude,
+                (float) $company->attendance_latitude,
+                (float) $company->attendance_longitude,
+            );
+
+            if ($distance > $company->attendance_radius_meters) {
+                throw ValidationException::withMessages(['attendance' => "You are {$distance} meters from the approved workplace area."]);
+            }
+
+            $result['verification_latitude'] = $latitude;
+            $result['verification_longitude'] = $longitude;
+            $result['verification_distance_meters'] = $distance;
+        }
+
+        return $result;
+    }
+
+    private function distanceInMeters(float $latitude, float $longitude, float $targetLatitude, float $targetLongitude): int
+    {
+        $earthRadius = 6371000;
+        $latitudeDelta = deg2rad($targetLatitude - $latitude);
+        $longitudeDelta = deg2rad($targetLongitude - $longitude);
+        $value = sin($latitudeDelta / 2) ** 2
+            + cos(deg2rad($latitude)) * cos(deg2rad($targetLatitude)) * sin($longitudeDelta / 2) ** 2;
+
+        return (int) round($earthRadius * 2 * atan2(sqrt($value), sqrt(1 - $value)));
+    }
+
     public function storeHistorical(
         StoreDailyReportRequest $request,
         RecordActivity $recordActivity,
@@ -167,25 +253,33 @@ class DailyReportController extends Controller
         $user = $request->user();
         $validated = $request->validated();
         $timezone = $user->companyRecord?->timezone ?? config('app.timezone');
+        $attendanceSchedule = $this->attendanceSchedule($user);
         $reportDate = (string) $validated['report_date'];
         $timeIn = Carbon::createFromFormat('Y-m-d H:i', "{$reportDate} {$validated['time_in']}", $timezone);
         $timeOut = Carbon::createFromFormat('Y-m-d H:i', "{$reportDate} {$validated['time_out']}", $timezone);
+
+        if (! $this->isWorkDay($user, $timeIn)) {
+            throw ValidationException::withMessages([
+                'report_date' => 'The selected date is not a scheduled work day for your department.',
+            ]);
+        }
+
         $scheduledTimeIn = Carbon::createFromFormat(
             'Y-m-d H:i:s',
-            "{$reportDate} ".($user->companyRecord?->work_start_time ?? '08:00:00'),
+            "{$reportDate} ".$attendanceSchedule['workStartTime'],
             $timezone,
         );
         $punctuality = DailyReport::classifyPunctuality(
             $timeIn,
             $scheduledTimeIn,
-            $user->companyRecord?->late_grace_minutes ?? 0,
+            $attendanceSchedule['graceMinutes'],
         );
 
         $report = DB::transaction(fn (): DailyReport => $user->dailyReports()->create([
             'report_date' => $reportDate,
             'time_in' => $timeIn->format('H:i:s'),
             'scheduled_time_in' => $scheduledTimeIn->format('H:i:s'),
-            'scheduled_grace_minutes' => $user->companyRecord?->late_grace_minutes ?? 0,
+            'scheduled_grace_minutes' => $attendanceSchedule['graceMinutes'],
             ...$punctuality,
             'time_out' => $timeOut->format('H:i:s'),
             'total_hours' => DailyReport::calculateTotalHours($timeIn, $timeOut),
@@ -367,5 +461,29 @@ class DailyReportController extends Controller
         }, attempts: 3);
 
         return to_route('reports.index');
+    }
+
+    /** @return array{workStartTime: string, graceMinutes: int, workDays: list<int>} */
+    private function attendanceSchedule(User $user): array
+    {
+        $user->loadMissing(['companyRecord', 'departmentRecord']);
+        $company = $user->companyRecord;
+        $department = $user->departmentRecord;
+
+        return [
+            'workStartTime' => $department?->work_start_time ?? $company?->work_start_time ?? '08:00:00',
+            'graceMinutes' => $department?->late_grace_minutes ?? $company?->late_grace_minutes ?? 0,
+            'workDays' => array_map('intval', $department?->work_days ?? $company?->work_days ?? [1, 2, 3, 4, 5]),
+        ];
+    }
+
+    private function isWorkDay(User $user, CarbonInterface $date): bool
+    {
+        $schedule = $this->attendanceSchedule($user);
+        $company = $user->companyRecord;
+        $isHoliday = $company !== null && $company->holidays()->whereDate('holiday_date', $date)->exists();
+
+        return in_array($date->dayOfWeekIso, $schedule['workDays'], true)
+            && ! $isHoliday;
     }
 }

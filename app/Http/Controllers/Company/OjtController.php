@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCompanyOjtRequest;
 use App\Http\Requests\UpdateOjtStartDateRequest;
 use App\Http\Requests\UpdateOjtSupervisorRequest;
+use App\Models\Department;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,9 +34,23 @@ class OjtController extends Controller
 
         $ojt = DB::transaction(function () use ($company, $request, $initialPassword, $supervisor): User {
             $studentId = $this->nextStudentId();
+            $department = Department::query()->firstOrCreate(
+                ['company_id' => $company->id, 'name' => $request->validated('department')],
+                ['is_active' => true],
+            );
+            $department->refresh();
+
+            if (! $department->is_active) {
+                throw ValidationException::withMessages(['department' => 'This department is archived. Restore it before assigning new OJTs.']);
+            }
+            if ($department->capacity !== null && $department->ojts()->count() >= $department->capacity) {
+                throw ValidationException::withMessages(['department' => 'This department has reached its OJT capacity.']);
+            }
 
             return $company->ojts()->create([
                 ...$request->validated(),
+                'department_id' => $department->id,
+                'ojt_status' => User::OJT_STATUS_ONBOARDING,
                 'supervisor_id' => $supervisor?->id,
                 'supervisor_name' => $supervisor?->name ?? $request->string('supervisor_name')->trim()->toString(),
                 'student_id' => $studentId,

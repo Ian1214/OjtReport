@@ -37,6 +37,11 @@ class CompletionCertificateController extends Controller
             'company_admin' => $query->where('company_id', $viewer->company_id),
             'supervisor' => $query->where('supervisor_id', $viewer->id),
             'ojt' => $query->where('user_id', $viewer->id),
+            'school_coordinator' => $query
+                ->where('status', CompletionCertificate::STATUS_FINALIZED)
+                ->whereHas('ojt', fn ($builder) => $builder
+                    ->where('school_id', $viewer->school_id)
+                    ->where('role', 'ojt')),
             default => abort(403),
         };
 
@@ -162,7 +167,15 @@ class CompletionCertificateController extends Controller
     ): Response {
         /** @var User $viewer */
         $viewer = $request->user();
-        abort_unless($completionCertificate->company_id === $viewer->company_id, 404);
+        $canLocateCertificate = match ($viewer->role) {
+            'company_admin' => $completionCertificate->company_id === $viewer->company_id,
+            'supervisor' => $completionCertificate->supervisor_id === $viewer->id,
+            'ojt' => $completionCertificate->user_id === $viewer->id,
+            'school_coordinator' => $viewer->school_id !== null
+                && $completionCertificate->ojt()->where('school_id', $viewer->school_id)->exists(),
+            default => false,
+        };
+        abort_unless($canLocateCertificate, 404);
         Gate::authorize('view', $completionCertificate);
         abort_unless($completionCertificate->status === CompletionCertificate::STATUS_FINALIZED, 403);
 

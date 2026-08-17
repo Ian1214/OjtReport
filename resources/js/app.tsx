@@ -12,7 +12,9 @@ createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
-            case name === 'welcome' || name === 'certificates/verify':
+            case name === 'welcome' ||
+                name === 'certificates/verify' ||
+                name === 'passports/verify':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
@@ -41,3 +43,9 @@ createInertiaApp({
 
 // This will set light / dark mode on load...
 initializeTheme();
+
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    window.addEventListener('load', () =>
+        navigator.serviceWorker.register('/sw.js'),
+    );
+}

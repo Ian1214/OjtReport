@@ -16,6 +16,10 @@ use Illuminate\Support\Collection;
  * @property int $late_grace_minutes
  * @property string $timezone
  * @property list<int>|null $work_days
+ * @property string $attendance_verification_mode
+ * @property string|null $attendance_latitude
+ * @property string|null $attendance_longitude
+ * @property int $attendance_radius_meters
  * @property-read Collection<int, CompanyHoliday> $holidays
  */
 class Company extends Model
@@ -29,6 +33,10 @@ class Company extends Model
         'late_grace_minutes',
         'timezone',
         'work_days',
+        'attendance_verification_mode',
+        'attendance_latitude',
+        'attendance_longitude',
+        'attendance_radius_meters',
     ];
 
     protected function casts(): array
@@ -36,6 +44,9 @@ class Company extends Model
         return [
             'late_grace_minutes' => 'integer',
             'work_days' => 'array',
+            'attendance_latitude' => 'decimal:7',
+            'attendance_longitude' => 'decimal:7',
+            'attendance_radius_meters' => 'integer',
         ];
     }
 
@@ -89,6 +100,16 @@ class Company extends Model
     public function completionCertificates(): HasMany
     {
         return $this->hasMany(CompletionCertificate::class);
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class);
+    }
+
+    public function departments(): HasMany
+    {
+        return $this->hasMany(Department::class);
     }
 
     public function isWorkDay(\DateTimeInterface $date): bool

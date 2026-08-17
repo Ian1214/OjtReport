@@ -20,6 +20,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 /**
  * @property int $id
  * @property int|null $company_id
+ * @property int|null $school_id
  * @property int|null $supervisor_id
  * @property string $role
  * @property bool $must_change_password
@@ -29,11 +30,15 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property int|null $year
  * @property string|null $company
  * @property string|null $department
+ * @property int|null $department_id
  * @property string|null $position
+ * @property string $ojt_status
  * @property string|null $supervisor_name
  * @property int|null $required_hours
  * @property Carbon|null $start_date
  * @property Carbon|null $end_date
+ * @property int|null $school_acknowledged_by
+ * @property Carbon|null $school_acknowledged_at
  * @property string $email
  * @property Carbon|null $email_verified_at
  * @property Carbon|null $terms_accepted_at
@@ -49,6 +54,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 #[Fillable([
     'name',
     'company_id',
+    'school_id',
     'supervisor_id',
     'role',
     'must_change_password',
@@ -57,11 +63,15 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'year',
     'company',
     'department',
+    'department_id',
     'position',
+    'ojt_status',
     'supervisor_name',
     'required_hours',
     'start_date',
     'end_date',
+    'school_acknowledged_by',
+    'school_acknowledged_at',
     'email',
     'password',
     'terms_accepted_at',
@@ -79,6 +89,26 @@ class User extends Authenticatable implements PasskeyUser
     /** @var array<string, mixed> */
     protected $attributes = [
         'timezone' => 'Asia/Manila',
+        'ojt_status' => 'active',
+    ];
+
+    public const OJT_STATUS_ONBOARDING = 'onboarding';
+
+    public const OJT_STATUS_ACTIVE = 'active';
+
+    public const OJT_STATUS_PAUSED = 'paused';
+
+    public const OJT_STATUS_COMPLETED = 'completed';
+
+    public const OJT_STATUS_WITHDRAWN = 'withdrawn';
+
+    /** @var list<string> */
+    public const OJT_STATUSES = [
+        self::OJT_STATUS_ONBOARDING,
+        self::OJT_STATUS_ACTIVE,
+        self::OJT_STATUS_PAUSED,
+        self::OJT_STATUS_COMPLETED,
+        self::OJT_STATUS_WITHDRAWN,
     ];
 
     public const ONLINE_WINDOW_SECONDS = 120;
@@ -124,6 +154,7 @@ class User extends Authenticatable implements PasskeyUser
             'must_change_password' => 'boolean',
             'start_date' => 'date',
             'end_date' => 'date',
+            'school_acknowledged_at' => 'datetime',
             'preferences' => 'array',
         ];
     }
@@ -161,6 +192,16 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(CompletionCertificate::class);
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class, 'ojt_id');
+    }
+
+    public function uploadedDocuments(): HasMany
+    {
+        return $this->hasMany(Document::class, 'uploaded_by');
+    }
+
     public function supervisedCompletionCertificates(): HasMany
     {
         return $this->hasMany(CompletionCertificate::class, 'supervisor_id');
@@ -195,17 +236,36 @@ class User extends Authenticatable implements PasskeyUser
     public function syncCompletionFromApprovedReports(): void
     {
         $approvedHours = (float) $this->approvedDailyReports()->sum('total_hours');
+        $isCompleted = $approvedHours >= (float) $this->required_hours;
 
         $this->update([
-            'end_date' => $approvedHours >= (float) $this->required_hours
+            'end_date' => $isCompleted
                 ? $this->approvedDailyReports()->max('report_date')
                 : null,
+            'ojt_status' => $isCompleted
+                ? self::OJT_STATUS_COMPLETED
+                : ($this->ojt_status === self::OJT_STATUS_COMPLETED ? self::OJT_STATUS_ACTIVE : $this->ojt_status),
         ]);
     }
 
     public function assignedSupervisor(): BelongsTo
     {
         return $this->belongsTo(self::class, 'supervisor_id');
+    }
+
+    public function departmentRecord(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'department_id');
+    }
+
+    public function onboardingChecklistItems(): HasMany
+    {
+        return $this->hasMany(OnboardingChecklistItem::class, 'ojt_id');
+    }
+
+    public function supervisorFeedback(): HasMany
+    {
+        return $this->hasMany(SupervisorFeedback::class, 'ojt_id');
     }
 
     public function assignedOjts(): HasMany
@@ -223,6 +283,21 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(OjtTask::class, 'supervisor_id');
     }
 
+    public function performanceEvaluations(): HasMany
+    {
+        return $this->hasMany(PerformanceEvaluation::class, 'ojt_id');
+    }
+
+    public function passportShares(): HasMany
+    {
+        return $this->hasMany(PassportShare::class, 'ojt_id');
+    }
+
+    public function authoredPerformanceEvaluations(): HasMany
+    {
+        return $this->hasMany(PerformanceEvaluation::class, 'supervisor_id');
+    }
+
     public function sentDirectMessages(): HasMany
     {
         return $this->hasMany(DirectMessage::class, 'sender_id');
@@ -238,6 +313,11 @@ class User extends Authenticatable implements PasskeyUser
         return $this->belongsTo(Company::class, 'company_id');
     }
 
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(School::class);
+    }
+
     public function isCompanyAdmin(): bool
     {
         return $this->role === 'company_admin';
@@ -246,6 +326,11 @@ class User extends Authenticatable implements PasskeyUser
     public function isSupervisor(): bool
     {
         return $this->role === 'supervisor';
+    }
+
+    public function isSchoolCoordinator(): bool
+    {
+        return $this->role === 'school_coordinator';
     }
 
     public function isOnline(): bool

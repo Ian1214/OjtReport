@@ -23,6 +23,10 @@ class CompanyFactory extends Factory
             'late_grace_minutes' => 0,
             'timezone' => 'Asia/Manila',
             'work_days' => [1, 2, 3, 4, 5],
+            'attendance_verification_mode' => 'disabled',
+            'attendance_latitude' => null,
+            'attendance_longitude' => null,
+            'attendance_radius_meters' => 150,
         ];
     }
 }

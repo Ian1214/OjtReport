@@ -12,7 +12,7 @@ class DtrSubmissionPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->isSchoolCoordinator();
     }
 
     /**
@@ -20,7 +20,11 @@ class DtrSubmissionPolicy
      */
     public function view(User $user, DtrSubmission $dtrSubmission): bool
     {
-        return false;
+        return $user->isSchoolCoordinator()
+            && $user->school_id !== null
+            && $dtrSubmission->user()
+                ->where('school_id', $user->school_id)
+                ->exists();
     }
 
     /**

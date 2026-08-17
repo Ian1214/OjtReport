@@ -61,7 +61,7 @@ type OjtOption = {
 };
 
 type Props = {
-    role: 'company_admin' | 'supervisor' | 'ojt';
+    role: 'company_admin' | 'supervisor' | 'ojt' | 'school_coordinator';
     signerName: string;
     ojts: OjtOption[];
     certificates: { data: Certificate[] };

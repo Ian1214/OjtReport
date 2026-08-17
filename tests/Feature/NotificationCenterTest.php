@@ -31,7 +31,7 @@ test('an OJT is notified when an administrator reviews a report', function (stri
     Notification::assertSentTo($ojt, DailyReportReviewed::class);
 })->with(['approve', 'reject']);
 
-test('users can view and mark only their own notifications as read', function () {
+test('viewing notifications automatically marks only the displayed users notifications as read', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
 
@@ -58,9 +58,14 @@ test('users can view and mark only their own notifications as read', function ()
         ->assertInertia(fn (Assert $page) => $page
             ->component('notifications/index')
             ->has('notifications.data', 1)
-            ->where('unreadCount', 1)
+            ->where('unreadCount', 0)
             ->where('notifications.data.0.data.report_id', 10)
-            ->where('navigation.unreadNotificationsCount', 1));
+            ->where('notifications.data.0.wasUnread', true)
+            ->where('notifications.data.0.readAt', fn (string $readAt): bool => $readAt !== '')
+            ->where('navigation.unreadNotificationsCount', 0));
+
+    expect($notification->refresh()->read_at)->not->toBeNull();
+    expect($otherNotification->refresh()->read_at)->toBeNull();
 
     $this->actingAs($user)
         ->patch(route('notifications.read', $otherNotification->id))
@@ -69,9 +74,6 @@ test('users can view and mark only their own notifications as read', function ()
     $this->actingAs($user)
         ->patch(route('notifications.read', $notification->id))
         ->assertRedirect();
-
-    expect($notification->refresh()->read_at)->not->toBeNull();
-    expect($otherNotification->refresh()->read_at)->toBeNull();
 });
 
 test('a user can mark all of their notifications as read', function () {
@@ -89,6 +91,39 @@ test('a user can mark all of their notifications as read', function () {
     $this->actingAs($user)
         ->patch(route('notifications.read-all'))
         ->assertRedirect();
+
+    expect($user->unreadNotifications()->count())->toBe(0);
+});
+
+test('opening a notification page does not mark notifications on later pages as seen', function () {
+    $user = User::factory()->create();
+
+    foreach (range(1, 21) as $reportId) {
+        Notification::sendNow($user, new DailyReportReviewed(
+            reportId: $reportId,
+            reportDate: '2026-08-06',
+            status: DailyReport::STATUS_APPROVED,
+            reviewerName: 'Company Administrator',
+        ));
+    }
+
+    $this->actingAs($user)
+        ->get(route('notifications.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('notifications.data', 20)
+            ->where('unreadCount', 1)
+            ->where('navigation.unreadNotificationsCount', 1));
+
+    expect($user->unreadNotifications()->count())->toBe(1);
+
+    $this->actingAs($user)
+        ->get(route('notifications.index', ['page' => 2]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('notifications.data', 1)
+            ->where('unreadCount', 0)
+            ->where('navigation.unreadNotificationsCount', 0));
 
     expect($user->unreadNotifications()->count())->toBe(0);
 });

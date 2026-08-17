@@ -164,5 +164,7 @@ function roleName(role: User['role']): string {
         ? 'Company administrator'
         : role === 'supervisor'
           ? 'Supervisor'
-          : 'OJT';
+          : role === 'school_coordinator'
+            ? 'School coordinator'
+            : 'OJT';
 }

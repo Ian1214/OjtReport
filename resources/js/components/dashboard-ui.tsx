@@ -17,6 +17,52 @@ type DashboardHeroProps = {
     actions?: ReactNode;
 };
 
+export function DashboardWorkspace({
+    children,
+    className,
+}: {
+    children: ReactNode;
+    className?: string;
+}) {
+    return (
+        <div
+            className={cn(
+                'relative isolate flex flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_85%_0%,color-mix(in_oklab,var(--primary)_11%,transparent),transparent_34%),radial-gradient(circle_at_5%_95%,color-mix(in_oklab,var(--primary)_5%,transparent),transparent_28%)]',
+                className,
+            )}
+        >
+            <div className="pointer-events-none absolute inset-0 -z-10 [background-image:linear-gradient(to_right,var(--primary)_1px,transparent_1px),linear-gradient(to_bottom,var(--primary)_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.035]" />
+            <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
+                {children}
+            </div>
+        </div>
+    );
+}
+
+export function DashboardSectionHeader({
+    title,
+    description,
+    aside,
+}: {
+    title: string;
+    description: string;
+    aside?: ReactNode;
+}) {
+    return (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
+                    {title}
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                    {description}
+                </p>
+            </div>
+            {aside && <div className="shrink-0">{aside}</div>}
+        </div>
+    );
+}
+
 export function DashboardHero({
     eyebrow,
     title,
@@ -55,7 +101,7 @@ type MetricCardProps = {
     label: string;
     value: string | number | null;
     detail?: string;
-    accent?: 'primary' | 'success';
+    accent?: 'primary' | 'success' | 'warning';
 };
 
 export function MetricCard({
@@ -65,10 +111,11 @@ export function MetricCard({
     detail,
     accent = 'primary',
 }: MetricCardProps) {
-    const iconClass =
-        accent === 'success'
-            ? 'bg-emerald-500/10 text-emerald-600'
-            : 'bg-primary/10 text-primary';
+    const iconClass = {
+        primary: 'bg-primary/10 text-primary',
+        success: 'bg-emerald-500/10 text-emerald-600',
+        warning: 'bg-amber-500/10 text-amber-600',
+    }[accent];
 
     return (
         <section className="command-panel group relative overflow-hidden rounded-2xl border border-border/80 bg-card/88 p-5 backdrop-blur-sm transition duration-200 hover:border-primary/25 hover:shadow-[0_20px_44px_-24px_color-mix(in_oklab,var(--primary)_45%,transparent)] motion-safe:hover:-translate-y-0.5">

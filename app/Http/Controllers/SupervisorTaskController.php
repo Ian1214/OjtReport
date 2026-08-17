@@ -18,10 +18,15 @@ class SupervisorTaskController extends Controller
 
         abort_unless($ojt->supervisor_id === $supervisor->id && $ojt->role === 'ojt', 404);
 
-        $supervisor->createdTasks()->create([
-            ...$request->validated(),
+        $validated = $request->validated();
+        $outcomeIds = $validated['outcome_ids'] ?? [];
+        unset($validated['outcome_ids']);
+
+        $task = $supervisor->createdTasks()->create([
+            ...$validated,
             'ojt_id' => $ojt->id,
         ]);
+        $task->curriculumOutcomes()->sync($outcomeIds);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Task assigned successfully.']);
 

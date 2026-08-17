@@ -24,7 +24,8 @@ class ManageOjtIndexRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', 'in:all,active,completed'],
+            'status' => ['nullable', 'in:all,onboarding,active,paused,completed,withdrawn'],
+            'department' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

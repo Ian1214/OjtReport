@@ -35,7 +35,11 @@ class ManagedOjtController extends Controller
                 'email',
                 'student_id',
                 'department',
+                'department_id',
                 'position',
+                'program',
+                'year',
+                'ojt_status',
                 'supervisor_id',
                 'supervisor_name',
                 'required_hours',
@@ -62,11 +66,41 @@ class ManagedOjtController extends Controller
                         ->orWhere('position', 'like', "%{$search}%");
                 });
             })
-            ->when(($filters['status'] ?? 'all') === 'active', fn (Builder $query): Builder => $query->whereNull('end_date'))
-            ->when(($filters['status'] ?? 'all') === 'completed', fn (Builder $query): Builder => $query->whereNotNull('end_date'));
-        $ojtPaginator = $ojtQuery->latest()->paginate(12)->withQueryString();
+            ->when(($filters['status'] ?? 'all') === 'active', fn (Builder $query): Builder => $query->whereIn('ojt_status', [User::OJT_STATUS_ONBOARDING, User::OJT_STATUS_ACTIVE])->whereNull('end_date'))
+            ->when(($filters['status'] ?? 'all') === 'completed', fn (Builder $query): Builder => $query->where(fn (Builder $query): Builder => $query->where('ojt_status', User::OJT_STATUS_COMPLETED)->orWhereNotNull('end_date')))
+            ->when(in_array($filters['status'] ?? 'all', [User::OJT_STATUS_ONBOARDING, User::OJT_STATUS_PAUSED, User::OJT_STATUS_WITHDRAWN], true), fn (Builder $query): Builder => $query->where('ojt_status', $filters['status']))
+            ->when($filters['department'] ?? null, fn (Builder $query, string $department): Builder => $query->where('department', $department));
+        $ojtPaginator = $ojtQuery
+            ->orderBy('department')
+            ->orderBy('name')
+            ->paginate(12)
+            ->withQueryString();
         $totalOjtCount = $company->ojts()->count();
-        $completedOjtCount = $company->ojts()->whereNotNull('end_date')->count();
+        $completedOjtCount = $company->ojts()->where(fn (Builder $query): Builder => $query->where('ojt_status', User::OJT_STATUS_COMPLETED)->orWhereNotNull('end_date'))->count();
+        $activeOjtCount = $company->ojts()->whereIn('ojt_status', [User::OJT_STATUS_ONBOARDING, User::OJT_STATUS_ACTIVE])->whereNull('end_date')->count();
+        $departments = $company->departments()
+            ->withCount('ojts')
+            ->orderByDesc('is_active')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($department): array => [
+                'id' => $department->id,
+                'name' => $department->name,
+                'ojtCount' => (int) $department->ojts_count,
+                'isActive' => $department->is_active,
+            ]);
+        $legacyDepartments = $company->ojts()
+            ->whereNull('department_id')
+            ->whereNotNull('department')
+            ->selectRaw('department, count(*) as aggregate')
+            ->groupBy('department')
+            ->get()
+            ->map(fn (User $ojt): array => [
+                'id' => null,
+                'name' => $ojt->department,
+                'ojtCount' => (int) $ojt->getAttribute('aggregate'),
+                'isActive' => true,
+            ]);
 
         return Inertia::render('company/dashboard', [
             'company' => ['name' => $company->name],
@@ -77,7 +111,11 @@ class ManagedOjtController extends Controller
                     'email' => $ojt->email,
                     'studentId' => $ojt->student_id,
                     'department' => $ojt->department,
+                    'departmentId' => $ojt->department_id,
                     'position' => $ojt->position,
+                    'program' => $ojt->program,
+                    'year' => $ojt->year,
+                    'status' => $ojt->ojt_status,
                     'supervisorName' => $ojt->supervisor_name,
                     'supervisorId' => $ojt->supervisor_id,
                     'requiredHours' => $ojt->required_hours,
@@ -99,7 +137,9 @@ class ManagedOjtController extends Controller
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? 'all',
+                'department' => $filters['department'] ?? '',
             ],
+            'departments' => $departments->concat($legacyDepartments)->sortBy('name')->values(),
             'pagination' => [
                 'currentPage' => $ojtPaginator->currentPage(),
                 'lastPage' => $ojtPaginator->lastPage(),
@@ -111,7 +151,7 @@ class ManagedOjtController extends Controller
             ],
             'stats' => [
                 'totalOjtCount' => $totalOjtCount,
-                'activeOjtCount' => $totalOjtCount - $completedOjtCount,
+                'activeOjtCount' => $activeOjtCount,
                 'completedOjtCount' => $completedOjtCount,
             ],
             'supervisors' => $company->users()
@@ -176,6 +216,32 @@ class ManagedOjtController extends Controller
                     'scheduled_time_in',
                     'attendance_status',
                     'late_minutes',
+                ]),
+            'onboardingItems' => $ojt->onboardingChecklistItems()
+                ->with('completedBy:id,name')
+                ->orderBy('completed_at')
+                ->orderBy('due_date')
+                ->get()
+                ->map(fn ($item): array => [
+                    'id' => $item->id,
+                    'title' => $item->title,
+                    'description' => $item->description,
+                    'dueDate' => $item->due_date?->toDateString(),
+                    'completedAt' => $item->completed_at?->toIso8601String(),
+                    'completedBy' => $item->completedBy?->name,
+                ]),
+            'feedback' => $ojt->supervisorFeedback()
+                ->with('supervisor:id,name')
+                ->latest()
+                ->get()
+                ->map(fn ($feedback): array => [
+                    'id' => $feedback->id,
+                    'category' => $feedback->category,
+                    'rating' => $feedback->rating,
+                    'comments' => $feedback->comments,
+                    'sharedWithSchool' => $feedback->shared_with_school,
+                    'supervisorName' => $feedback->supervisor->name,
+                    'createdAt' => $feedback->created_at->toIso8601String(),
                 ]),
         ]);
     }

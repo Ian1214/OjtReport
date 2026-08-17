@@ -18,12 +18,15 @@ class SupervisorDashboardController extends Controller
 
         return Inertia::render('supervisor/dashboard', [
             'ojts' => $supervisor->assignedOjts()
-                ->with(['assignedTasks' => fn ($query) => $query->latest()])
+                ->with([
+                    'school.curriculumOutcomes' => fn ($query) => $query->where('is_active', true)->orderBy('code'),
+                    'assignedTasks' => fn ($query) => $query->with('curriculumOutcomes:id,code,title')->latest(),
+                ])
                 ->withCount(['sentDirectMessages as unread_messages_count' => fn ($query) => $query
                     ->where('recipient_id', $supervisor->id)
                     ->whereNull('read_at')])
                 ->orderBy('name')
-                ->get(['id', 'name', 'student_id', 'program', 'department', 'position', 'last_seen_at'])
+                ->get(['id', 'school_id', 'name', 'student_id', 'program', 'department', 'position', 'last_seen_at'])
                 ->map(fn (User $ojt): array => [
                     'id' => $ojt->id,
                     'name' => $ojt->name,
@@ -34,12 +37,21 @@ class SupervisorDashboardController extends Controller
                     'isOnline' => $ojt->isOnline(),
                     'lastSeenAt' => $ojt->last_seen_at?->toIso8601String(),
                     'unreadCount' => (int) $ojt->unread_messages_count,
+                    'outcomes' => $ojt->school?->curriculumOutcomes->map(fn ($outcome): array => [
+                        'id' => $outcome->id,
+                        'code' => $outcome->code,
+                        'title' => $outcome->title,
+                    ]) ?? [],
                     'tasks' => $ojt->assignedTasks->map(fn ($task): array => [
                         'id' => $task->id,
                         'title' => $task->title,
                         'description' => $task->description,
                         'status' => $task->status,
                         'dueDate' => $task->due_date?->toDateString(),
+                        'outcomes' => $task->curriculumOutcomes->map(fn ($outcome): array => [
+                            'code' => $outcome->code,
+                            'title' => $outcome->title,
+                        ]),
                     ]),
                 ]),
         ]);
@@ -86,6 +98,32 @@ class SupervisorDashboardController extends Controller
                     'scheduled_time_in',
                     'attendance_status',
                     'late_minutes',
+                ]),
+            'onboardingItems' => $ojt->onboardingChecklistItems()
+                ->with('completedBy:id,name')
+                ->orderBy('completed_at')
+                ->orderBy('due_date')
+                ->get()
+                ->map(fn ($item): array => [
+                    'id' => $item->id,
+                    'title' => $item->title,
+                    'description' => $item->description,
+                    'dueDate' => $item->due_date?->toDateString(),
+                    'completedAt' => $item->completed_at?->toIso8601String(),
+                    'completedBy' => $item->completedBy?->name,
+                ]),
+            'feedback' => $ojt->supervisorFeedback()
+                ->with('supervisor:id,name')
+                ->latest()
+                ->get()
+                ->map(fn ($feedback): array => [
+                    'id' => $feedback->id,
+                    'category' => $feedback->category,
+                    'rating' => $feedback->rating,
+                    'comments' => $feedback->comments,
+                    'sharedWithSchool' => $feedback->shared_with_school,
+                    'supervisorName' => $feedback->supervisor->name,
+                    'createdAt' => $feedback->created_at->toIso8601String(),
                 ]),
         ]);
     }

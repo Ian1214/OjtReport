@@ -12,7 +12,7 @@ class CompletionCertificatePolicy
      */
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['company_admin', 'supervisor', 'ojt'], true);
+        return in_array($user->role, ['company_admin', 'supervisor', 'ojt', 'school_coordinator'], true);
     }
 
     /**
@@ -24,6 +24,10 @@ class CompletionCertificatePolicy
             'company_admin' => $completionCertificate->company_id === $user->company_id,
             'supervisor' => $completionCertificate->supervisor_id === $user->id,
             'ojt' => $completionCertificate->user_id === $user->id,
+            'school_coordinator' => $user->school_id !== null
+                && $completionCertificate->ojt()
+                    ->where('school_id', $user->school_id)
+                    ->exists(),
             default => false,
         };
     }

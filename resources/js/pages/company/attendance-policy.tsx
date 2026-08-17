@@ -1,9 +1,31 @@
-import { Form, Head, Link } from '@inertiajs/react';
-import { Clock8, ExternalLink, Scale, ShieldCheck } from 'lucide-react';
+import { Form, Head, Link, router } from '@inertiajs/react';
+import {
+    CheckCircle2,
+    Clock3,
+    Clock8,
+    ExternalLink,
+    MapPinCheck,
+    QrCode,
+    RefreshCw,
+    Scale,
+    ScanLine,
+    ShieldCheck,
+    Smartphone,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { update } from '@/actions/App/Http/Controllers/Company/AttendancePolicyController';
+import { update as updateVerification } from '@/actions/App/Http/Controllers/Company/AttendanceVerificationController';
 import { DashboardHero } from '@/components/dashboard-ui';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -17,10 +39,19 @@ type Props = {
         lateGraceMinutes: number;
         timezone: string;
         workDays: number[];
+        verificationMode:
+            'disabled' | 'qr' | 'geolocation' | 'qr_and_geolocation';
+        attendanceLatitude: string | null;
+        attendanceLongitude: string | null;
+        attendanceRadiusMeters: number;
     };
+    attendanceQr: {
+        qrImage: string;
+        expiresAt: string;
+    } | null;
 };
 
-export default function AttendancePolicy({ company }: Props) {
+export default function AttendancePolicy({ company, attendanceQr }: Props) {
     return (
         <>
             <Head title="Attendance policy" />
@@ -221,9 +252,377 @@ export default function AttendancePolicy({ company }: Props) {
                         </Button>
                     </aside>
                 </div>
+
+                <section className="rounded-2xl border border-primary/20 bg-card p-5 shadow-sm sm:p-6">
+                    <div className="flex items-start gap-3 border-b pb-5">
+                        <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+                            <MapPinCheck className="size-5" />
+                        </div>
+                        <div>
+                            <h2 className="font-semibold">
+                                Attendance verification
+                            </h2>
+                            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                QR codes prove the OJT scanned a short-lived
+                                company code. Location is optional and requires
+                                consent on every time-in.
+                            </p>
+                        </div>
+                    </div>
+                    <Form
+                        {...updateVerification.form()}
+                        className="mt-6 grid gap-5"
+                    >
+                        {({ errors, processing }) => (
+                            <>
+                                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="verification_mode">
+                                            Verification mode
+                                        </Label>
+                                        <select
+                                            id="verification_mode"
+                                            name="attendance_verification_mode"
+                                            defaultValue={
+                                                company.verificationMode
+                                            }
+                                            className="h-10 rounded-md border bg-background px-3 text-sm"
+                                        >
+                                            <option value="disabled">
+                                                Disabled
+                                            </option>
+                                            <option value="qr">QR only</option>
+                                            <option value="geolocation">
+                                                Location only
+                                            </option>
+                                            <option value="qr_and_geolocation">
+                                                QR + location
+                                            </option>
+                                        </select>
+                                        <InputError
+                                            message={
+                                                errors.attendance_verification_mode
+                                            }
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="latitude">
+                                            Workplace latitude
+                                        </Label>
+                                        <Input
+                                            id="latitude"
+                                            name="attendance_latitude"
+                                            type="number"
+                                            step="0.0000001"
+                                            defaultValue={
+                                                company.attendanceLatitude ?? ''
+                                            }
+                                        />
+                                        <InputError
+                                            message={errors.attendance_latitude}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="longitude">
+                                            Workplace longitude
+                                        </Label>
+                                        <Input
+                                            id="longitude"
+                                            name="attendance_longitude"
+                                            type="number"
+                                            step="0.0000001"
+                                            defaultValue={
+                                                company.attendanceLongitude ??
+                                                ''
+                                            }
+                                        />
+                                        <InputError
+                                            message={
+                                                errors.attendance_longitude
+                                            }
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="radius">
+                                            Allowed radius (meters)
+                                        </Label>
+                                        <Input
+                                            id="radius"
+                                            name="attendance_radius_meters"
+                                            type="number"
+                                            min="25"
+                                            max="5000"
+                                            defaultValue={
+                                                company.attendanceRadiusMeters
+                                            }
+                                        />
+                                        <InputError
+                                            message={
+                                                errors.attendance_radius_meters
+                                            }
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-3">
+                                    <Button type="submit" disabled={processing}>
+                                        {processing ? (
+                                            <Spinner />
+                                        ) : (
+                                            <ShieldCheck />
+                                        )}{' '}
+                                        Save verification
+                                    </Button>
+                                    {attendanceQr && (
+                                        <AttendanceQrDialog
+                                            companyName={company.name}
+                                            verificationMode={
+                                                company.verificationMode
+                                            }
+                                            attendanceQr={attendanceQr}
+                                        />
+                                    )}
+                                </div>
+                                <p className="text-xs leading-5 text-muted-foreground">
+                                    Privacy: location is collected only at
+                                    time-in, stored with that attendance record
+                                    for audit, and never tracked continuously.
+                                </p>
+                            </>
+                        )}
+                    </Form>
+                </section>
             </div>
         </>
     );
+}
+
+function AttendanceQrDialog({
+    companyName,
+    verificationMode,
+    attendanceQr,
+}: {
+    companyName: string;
+    verificationMode: Props['company']['verificationMode'];
+    attendanceQr: NonNullable<Props['attendanceQr']>;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [secondsRemaining, setSecondsRemaining] = useState(() =>
+        remainingSeconds(attendanceQr.expiresAt),
+    );
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        const timer = window.setInterval(() => {
+            setSecondsRemaining(remainingSeconds(attendanceQr.expiresAt));
+        }, 1000);
+
+        return () => window.clearInterval(timer);
+    }, [attendanceQr.expiresAt, isOpen]);
+
+    const isExpired = secondsRemaining === 0;
+    const requiresLocation = verificationMode === 'qr_and_geolocation';
+
+    const updateOpenState = (open: boolean) => {
+        setIsOpen(open);
+
+        if (open) {
+            setSecondsRemaining(remainingSeconds(attendanceQr.expiresAt));
+        }
+    };
+
+    const refreshQr = () => {
+        router.reload({
+            only: ['attendanceQr'],
+            onStart: () => setIsRefreshing(true),
+            onFinish: () => setIsRefreshing(false),
+        });
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={updateOpenState}>
+            <DialogTrigger asChild>
+                <Button type="button" variant="outline">
+                    <QrCode /> Show rotating QR
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[94dvh] gap-0 overflow-y-auto p-0 sm:max-w-4xl">
+                <DialogHeader className="border-b border-border/70 px-5 py-5 pr-14 sm:px-7">
+                    <div className="mb-1 flex items-center gap-2 text-xs font-semibold tracking-[0.16em] text-primary uppercase">
+                        <ScanLine className="size-4" /> Secure attendance
+                    </div>
+                    <DialogTitle className="text-xl sm:text-2xl">
+                        Scan to verify attendance
+                    </DialogTitle>
+                    <DialogDescription className="max-w-2xl leading-6">
+                        Display this rotating code at the workplace. The OJT
+                        scans it from their signed-in phone before recording
+                        time in.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid lg:grid-cols-[minmax(18rem,.85fr)_minmax(0,1.15fr)]">
+                    <section className="border-b border-border/70 p-5 sm:p-7 lg:border-r lg:border-b-0">
+                        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                                <span className="relative flex size-2.5">
+                                    {!isExpired && (
+                                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
+                                    )}
+                                    <span
+                                        className={`relative inline-flex size-2.5 rounded-full ${isExpired ? 'bg-destructive' : 'bg-emerald-500'}`}
+                                    />
+                                </span>
+                                <span className="text-sm font-semibold">
+                                    {isExpired ? 'Code expired' : 'Live code'}
+                                </span>
+                            </div>
+                            <span
+                                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-xs font-semibold ${isExpired ? 'border-destructive/25 bg-destructive/10 text-destructive' : 'border-primary/20 bg-primary/10 text-primary'}`}
+                            >
+                                <Clock3 className="size-3.5" />
+                                {isExpired
+                                    ? 'Expired'
+                                    : formatCountdown(secondsRemaining)}
+                            </span>
+                        </div>
+
+                        <div className="relative mx-auto max-w-sm">
+                            <div className="absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-cyan-400/20 via-primary/10 to-emerald-400/20 blur-xl" />
+                            <div className="relative overflow-hidden rounded-[1.6rem] border border-white/20 bg-white p-4 shadow-2xl sm:p-5">
+                                <img
+                                    src={attendanceQr.qrImage}
+                                    alt={`Attendance verification QR code for ${companyName}`}
+                                    className={`aspect-square w-full transition duration-300 ${isExpired ? 'opacity-20 grayscale' : ''}`}
+                                />
+                                {isExpired && (
+                                    <div className="absolute inset-0 grid place-items-center p-6 text-center">
+                                        <div className="rounded-2xl border border-red-200 bg-white/95 px-5 py-4 text-slate-950 shadow-xl">
+                                            <p className="font-bold">
+                                                This code has expired
+                                            </p>
+                                            <p className="mt-1 text-sm text-slate-600">
+                                                Generate a fresh QR to continue.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <Button
+                            type="button"
+                            size="lg"
+                            className="mt-5 w-full"
+                            disabled={isRefreshing}
+                            onClick={refreshQr}
+                        >
+                            {isRefreshing ? <Spinner /> : <RefreshCw />}
+                            Generate fresh QR
+                        </Button>
+                    </section>
+
+                    <section className="p-5 sm:p-7">
+                        <div className="flex items-start gap-3">
+                            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                                <Smartphone className="size-5" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold">
+                                    How the OJT checks in
+                                </h3>
+                                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                    Complete these steps in the same signed-in
+                                    mobile browser.
+                                </p>
+                            </div>
+                        </div>
+
+                        <ol className="mt-5 grid gap-3">
+                            <QrStep
+                                number="01"
+                                icon={Smartphone}
+                                title="Open the secure mobile site"
+                                description="The OJT signs in on their phone using the HTTPS site address."
+                            />
+                            <QrStep
+                                number="02"
+                                icon={QrCode}
+                                title="Scan this rotating code"
+                                description="Use the phone camera and open the detected link in the same signed-in browser."
+                            />
+                            {requiresLocation && (
+                                <QrStep
+                                    number="03"
+                                    icon={MapPinCheck}
+                                    title="Allow one-time location access"
+                                    description="Return to Attendance, provide consent, and allow location when the browser asks."
+                                />
+                            )}
+                            <QrStep
+                                number={requiresLocation ? '04' : '03'}
+                                icon={CheckCircle2}
+                                title="Tap Time in now"
+                                description="The server records the official time after every enabled verification succeeds."
+                            />
+                        </ol>
+
+                        <div className="mt-5 rounded-xl border border-primary/15 bg-primary/[0.04] p-4 text-xs leading-5 text-muted-foreground">
+                            Each QR is signed, expires after ten minutes, and is
+                            valid only for {companyName}. Location is requested
+                            once and is never continuously tracked.
+                        </div>
+                    </section>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function QrStep({
+    number,
+    icon: Icon,
+    title,
+    description,
+}: {
+    number: string;
+    icon: typeof Smartphone;
+    title: string;
+    description: string;
+}) {
+    return (
+        <li className="flex gap-3 rounded-xl border border-border/70 bg-background/50 p-3.5">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted font-mono text-xs font-bold text-muted-foreground">
+                {number}
+            </span>
+            <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                    <Icon className="size-4 shrink-0 text-primary" />
+                    <h4 className="text-sm font-medium">{title}</h4>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {description}
+                </p>
+            </div>
+        </li>
+    );
+}
+
+function remainingSeconds(expiresAt: string): number {
+    return Math.max(
+        0,
+        Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000),
+    );
+}
+
+function formatCountdown(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+
+    return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
 }
 
 AttendancePolicy.layout = {

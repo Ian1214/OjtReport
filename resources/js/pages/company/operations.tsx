@@ -21,14 +21,45 @@ import { exportMethod as privacyExport } from '@/routes/privacy';
 
 type Props = {
     health: {
-        database: boolean;
-        queueDepth: number;
-        failedJobs: number;
-        environment: string;
-        debug: boolean;
-        https: boolean;
-        mfaRequired: boolean;
+        checkedAt: string;
+        database: {
+            healthy: boolean;
+            latencyMs: number | null;
+            remedy: string;
+        };
+        cache: { healthy: boolean; remedy: string };
+        storage: { healthy: boolean; disk: string; remedy: string };
+        scheduler: {
+            healthy: boolean;
+            lastSeenAt: string | null;
+            ageSeconds: number | null;
+            remedy: string;
+        };
+        queue: {
+            healthy: boolean;
+            reachable: boolean;
+            waitingJobs: number;
+            failedJobs: number;
+            lastSeenAt: string | null;
+            ageSeconds: number | null;
+            remedy: string;
+        };
+        mail: { healthy: boolean; mailer: string; remedy: string };
+        backup: {
+            healthy: boolean;
+            status: string;
+            completedAt: string | null;
+            verifiedAt: string | null;
+            remedy: string;
+        };
+        configuration: {
+            debugDisabled: boolean;
+            https: boolean;
+            asyncQueue: boolean;
+            mfaRequired: boolean;
+        };
     };
+    environment: string;
     backups: {
         id: number;
         path: string;
@@ -46,13 +77,23 @@ type Props = {
     }[];
 };
 
-export default function Operations({ health, backups, archivedOjts }: Props) {
+export default function Operations({
+    health,
+    environment,
+    backups,
+    archivedOjts,
+}: Props) {
     const productionReady =
-        health.database &&
-        !health.debug &&
-        health.https &&
-        health.mfaRequired &&
-        health.failedJobs === 0;
+        health.database.healthy &&
+        health.cache.healthy &&
+        health.storage.healthy &&
+        health.scheduler.healthy &&
+        health.queue.healthy &&
+        health.mail.healthy &&
+        health.backup.healthy &&
+        health.configuration.debugDisabled &&
+        health.configuration.https &&
+        health.configuration.asyncQueue;
 
     return (
         <>
@@ -63,27 +104,80 @@ export default function Operations({ health, backups, archivedOjts }: Props) {
                     title="System operations"
                     description="Check production readiness, queue health, and verified database backups from one protected workspace."
                 />
-                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     <HealthCard
                         label="Database"
-                        value={health.database ? 'Connected' : 'Unavailable'}
-                        healthy={health.database}
+                        value={
+                            health.database.healthy
+                                ? 'Connected'
+                                : 'Unavailable'
+                        }
+                        healthy={health.database.healthy}
+                        detail={
+                            health.database.latencyMs === null
+                                ? health.database.remedy
+                                : `${health.database.latencyMs} ms response`
+                        }
                     />
                     <HealthCard
-                        label="Queue"
-                        value={`${health.queueDepth} waiting`}
-                        healthy={health.failedJobs === 0}
-                        detail={`${health.failedJobs} failed`}
+                        label="Queue worker"
+                        value={
+                            health.queue.healthy
+                                ? 'Responding'
+                                : 'Needs attention'
+                        }
+                        healthy={health.queue.healthy}
+                        detail={`${health.queue.waitingJobs} waiting · ${health.queue.failedJobs} failed`}
                     />
                     <HealthCard
-                        label="HTTPS"
-                        value={health.https ? 'Configured' : 'Required'}
-                        healthy={health.https}
+                        label="Scheduler"
+                        value={
+                            health.scheduler.healthy
+                                ? 'Running'
+                                : 'No heartbeat'
+                        }
+                        healthy={health.scheduler.healthy}
+                        detail={
+                            health.scheduler.healthy
+                                ? 'Checked every minute'
+                                : health.scheduler.remedy
+                        }
                     />
                     <HealthCard
-                        label="Privileged MFA"
-                        value={health.mfaRequired ? 'Enforced' : 'Optional'}
-                        healthy={health.mfaRequired}
+                        label="Cache"
+                        value={
+                            health.cache.healthy ? 'Writable' : 'Unavailable'
+                        }
+                        healthy={health.cache.healthy}
+                        detail={
+                            health.cache.healthy
+                                ? undefined
+                                : health.cache.remedy
+                        }
+                    />
+                    <HealthCard
+                        label="Protected storage"
+                        value={
+                            health.storage.healthy ? 'Writable' : 'Unavailable'
+                        }
+                        healthy={health.storage.healthy}
+                        detail={
+                            health.storage.healthy
+                                ? health.storage.disk
+                                : health.storage.remedy
+                        }
+                    />
+                    <HealthCard
+                        label="Verified backup"
+                        value={
+                            health.backup.healthy ? 'Current' : 'Action needed'
+                        }
+                        healthy={health.backup.healthy}
+                        detail={
+                            health.backup.healthy
+                                ? health.backup.status
+                                : health.backup.remedy
+                        }
                     />
                 </section>
                 <section
@@ -107,8 +201,9 @@ export default function Operations({ health, backups, archivedOjts }: Props) {
                                     php artisan system:preflight
                                 </code>{' '}
                                 on the deployment server for the complete
-                                release gate. Current environment:{' '}
-                                {health.environment}.
+                                release gate. Current environment: {environment}
+                                . Last live diagnostic:{' '}
+                                {new Date(health.checkedAt).toLocaleString()}.
                             </p>
                         </div>
                     </div>

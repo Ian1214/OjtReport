@@ -31,5 +31,7 @@ function roleLabel(role: User['role']): string {
         ? 'Company'
         : role === 'supervisor'
           ? 'Supervisor'
-          : 'OJT';
+          : role === 'school_coordinator'
+            ? 'School'
+            : 'OJT';
 }

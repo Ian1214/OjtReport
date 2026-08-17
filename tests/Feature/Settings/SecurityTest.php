@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\School;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -76,6 +77,36 @@ test('a privileged user can register a passkey while MFA enforcement is enabled'
         ->assertSuccessful()
         ->assertHeader('content-type', 'application/json');
 });
+
+test('a school coordinator can access the school portal without two factor authentication or a passkey', function () {
+    config(['operations.security.require_privileged_mfa' => true]);
+
+    $coordinator = User::factory()->create([
+        'role' => 'school_coordinator',
+        'school_id' => School::factory()->create()->id,
+        'company_id' => null,
+        'must_change_password' => false,
+        'two_factor_confirmed_at' => null,
+    ]);
+
+    $this->actingAs($coordinator)
+        ->get(route('school.dashboard'))
+        ->assertSuccessful();
+});
+
+test('company administrators and supervisors still require a second factor', function (string $role) {
+    config(['operations.security.require_privileged_mfa' => true]);
+
+    $user = User::factory()->create([
+        'role' => $role,
+        'must_change_password' => false,
+        'two_factor_confirmed_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('security.edit'));
+})->with(['company_admin', 'supervisor']);
 
 test('security page renders without two factor when feature is disabled', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());

@@ -5,31 +5,24 @@ namespace App\Http\Controllers\Company;
 use App\Http\Controllers\Controller;
 use App\Models\SystemBackup;
 use App\Models\User;
+use App\Services\SystemHealthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class OperationsController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, SystemHealthService $health): Response
     {
         /** @var User $admin */
         $admin = $request->user();
         abort_unless($admin->isCompanyAdmin(), 403);
 
         return Inertia::render('company/operations', [
-            'health' => [
-                'database' => $this->databaseHealthy(),
-                'queueDepth' => DB::table('jobs')->count(),
-                'failedJobs' => DB::table('failed_jobs')->count(),
-                'environment' => app()->environment(),
-                'debug' => (bool) config('app.debug'),
-                'https' => str_starts_with((string) config('app.url'), 'https://'),
-                'mfaRequired' => (bool) config('operations.security.require_privileged_mfa'),
-            ],
+            'health' => $health->snapshot(),
+            'environment' => app()->environment(),
             'backups' => SystemBackup::query()->latest()->limit(10)->get()->map(fn (SystemBackup $backup): array => [
                 'id' => $backup->id,
                 'path' => $backup->path,
@@ -76,16 +69,5 @@ class OperationsController extends Controller
         ]);
 
         return back();
-    }
-
-    private function databaseHealthy(): bool
-    {
-        try {
-            DB::select('select 1');
-
-            return true;
-        } catch (\Throwable) {
-            return false;
-        }
     }
 }

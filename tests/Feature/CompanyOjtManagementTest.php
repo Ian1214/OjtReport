@@ -43,6 +43,36 @@ test('a company administrator can create an OJT account with a secure password s
     Notification::assertSentTo($ojt, OjtAccountCreated::class);
 });
 
+test('a company administrator can create and categorize an OJT in a new department', function () {
+    Notification::fake();
+
+    $company = Company::factory()->create();
+    $companyAdmin = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'role' => 'company_admin',
+    ]);
+
+    $this->actingAs($companyAdmin)
+        ->post(route('company.ojts.store'), [
+            'name' => 'Paolo Reyes',
+            'email' => 'paolo.reyes@gmail.com',
+            'program' => 'Bachelor of Science in Business Administration',
+            'year' => 4,
+            'department' => '  Human   Resources  ',
+            'position' => '  HR   Intern  ',
+            'required_hours' => 486,
+            'start_date' => '2026-08-05',
+        ])
+        ->assertRedirect(route('company.ojts.index', absolute: false))
+        ->assertSessionHasNoErrors();
+
+    $ojt = User::query()->where('email', 'paolo.reyes@gmail.com')->firstOrFail();
+
+    expect($ojt->department)->toBe('Human Resources')
+        ->and($ojt->position)->toBe('HR Intern');
+});
+
 test('a company administrator can assign a supervisor to an OJT', function () {
     $company = Company::factory()->create();
     $companyAdmin = User::factory()->create([
@@ -136,8 +166,25 @@ test('a company dashboard shows a focused overview', function () {
         'company' => $company->name,
         'role' => 'company_admin',
     ]);
-    User::factory()->create(['company_id' => $company->id, 'company' => $company->name]);
-    User::factory()->create(['company_id' => $otherCompany->id, 'company' => $otherCompany->name]);
+    $ojt = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'supervisor_id' => null,
+    ]);
+    $otherOjt = User::factory()->create([
+        'company_id' => $otherCompany->id,
+        'company' => $otherCompany->name,
+    ]);
+    DailyReport::factory()->for($ojt)->create([
+        'report_date' => now($company->timezone)->toDateString(),
+        'time_out' => null,
+        'attendance_status' => DailyReport::ATTENDANCE_LATE,
+        'approval_status' => DailyReport::STATUS_PENDING,
+    ]);
+    DailyReport::factory()->for($otherOjt)->create([
+        'report_date' => now($company->timezone)->toDateString(),
+        'approval_status' => DailyReport::STATUS_PENDING,
+    ]);
 
     $this->actingAs($companyAdmin)
         ->get(route('dashboard'))
@@ -145,7 +192,14 @@ test('a company dashboard shows a focused overview', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('company/overview')
             ->where('company.name', $company->name)
-            ->where('stats.totalOjtCount', 1));
+            ->where('stats.totalOjtCount', 1)
+            ->where('monitoring.attendance.recorded', 1)
+            ->where('monitoring.attendance.timedIn', 1)
+            ->where('monitoring.attendance.late', 1)
+            ->where('monitoring.queues.reports', 1)
+            ->where('monitoring.queues.total', 1)
+            ->where('monitoring.workforce.unassignedSupervisor', 1)
+            ->where('monitoring.system.backupStatus', 'not_available'));
 });
 
 test('a company administrator can view only their own OJT reports', function () {
@@ -231,6 +285,39 @@ test('a company administrator can filter and paginate managed OJTs', function ()
             ->has('ojts', 12)
             ->where('pagination.total', 13)
             ->where('pagination.lastPage', 2));
+});
+
+test('managed OJTs are grouped and filterable by department', function () {
+    $company = Company::factory()->create();
+    $companyAdmin = User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'role' => 'company_admin',
+    ]);
+    User::factory()->count(2)->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'department' => 'Human Resources',
+        'position' => 'HR Intern',
+    ]);
+    User::factory()->create([
+        'company_id' => $company->id,
+        'company' => $company->name,
+        'department' => 'Information Technology',
+    ]);
+
+    $this->actingAs($companyAdmin)
+        ->get(route('company.ojts.index', ['department' => 'Human Resources']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('company/dashboard')
+            ->where('filters.department', 'Human Resources')
+            ->has('departments', 2)
+            ->where('departments.0.name', 'Human Resources')
+            ->where('departments.0.ojtCount', 2)
+            ->has('ojts', 2)
+            ->where('ojts.0.department', 'Human Resources')
+            ->where('ojts.1.department', 'Human Resources'));
 });
 
 test('an OJT cannot access company management pages', function () {

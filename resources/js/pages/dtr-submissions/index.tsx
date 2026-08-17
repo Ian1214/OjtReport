@@ -55,7 +55,7 @@ type Submission = {
 };
 
 type Props = {
-    role: 'company_admin' | 'supervisor' | 'ojt';
+    role: 'company_admin' | 'supervisor' | 'ojt' | 'school_coordinator';
     signerName: string;
     submissions: { data: Submission[] };
 };

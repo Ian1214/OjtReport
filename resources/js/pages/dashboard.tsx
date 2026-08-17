@@ -9,9 +9,13 @@ import {
     ListChecks,
     MessageCircle,
     Play,
+    Star,
 } from 'lucide-react';
 import { timeIn } from '@/actions/App/Http/Controllers/DailyReportController';
 import {
+    DashboardHero,
+    DashboardSectionHeader,
+    DashboardWorkspace,
     EmptyState,
     NextActionCard,
     StatusBadge,
@@ -63,6 +67,20 @@ type Props = {
     progress: Progress;
     taskSummary: TaskSummary;
     tasks?: Task[];
+    onboarding?: {
+        id: number;
+        title: string;
+        dueDate: string | null;
+        completedAt: string | null;
+    }[];
+    recentFeedback?: {
+        id: number;
+        category: string;
+        rating: number;
+        comments: string;
+        supervisorName: string;
+        createdAt: string;
+    }[];
 };
 
 export default function Dashboard({
@@ -71,6 +89,8 @@ export default function Dashboard({
     progress,
     taskSummary,
     tasks = [],
+    onboarding = [],
+    recentFeedback = [],
 }: Props) {
     const { auth } = usePage<{ auth: { user: User } }>().props;
     const user = auth.user;
@@ -82,136 +102,186 @@ export default function Dashboard({
         <>
             <Head title="Home" />
 
-            <div className="flex flex-1 flex-col bg-[radial-gradient(circle_at_top_right,color-mix(in_oklab,var(--primary)_8%,transparent),transparent_42%)] p-4 sm:p-6">
-                <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-                    <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                            <p className="text-xs font-semibold tracking-[0.16em] text-primary uppercase">
-                                OJT home
-                            </p>
-                            <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
-                                Good day, {firstName(user.name)}
-                            </h1>
-                            <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-                                Here is what you need to do today.
-                            </p>
-                        </div>
+            <DashboardWorkspace>
+                <DashboardHero
+                    eyebrow="OJT workspace"
+                    title={`Good day, ${firstName(user.name)}`}
+                    description="Your next attendance action, internship progress, assigned tasks, and supervisor updates are organized below."
+                    actions={
                         <StatusBadge
                             status={isComplete ? 'completed' : 'in_progress'}
                             label={
                                 isComplete ? 'OJT completed' : 'OJT in progress'
                             }
-                            className="px-3 py-1"
+                            className="px-3 py-1.5"
                         />
-                    </header>
+                    }
+                />
 
-                    <div className="grid items-stretch gap-5 lg:grid-cols-[1.35fr_0.65fr]">
-                        <TodayCard today={today} isComplete={isComplete} />
-                        <ProgressCard progress={progress} />
-                    </div>
+                <div className="grid items-stretch gap-5 lg:grid-cols-[1.35fr_0.65fr]">
+                    <TodayCard today={today} isComplete={isComplete} />
+                    <ProgressCard progress={progress} />
+                </div>
 
-                    <div className="grid items-start gap-5 lg:grid-cols-[1.35fr_0.65fr]">
-                        <section className="overflow-hidden rounded-3xl border bg-card/90 shadow-sm">
-                            <div className="flex items-center justify-between gap-3 border-b px-5 py-4 sm:px-6">
-                                <div>
-                                    <h2 className="flex items-center gap-2 font-semibold">
-                                        <ListChecks className="size-4 text-primary" />
-                                        Current tasks
-                                    </h2>
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        Focus on what is waiting or already in
-                                        progress.
-                                    </p>
-                                </div>
-                                <Button variant="ghost" size="sm" asChild>
-                                    <Link href={tasksIndex()}>
-                                        View all
-                                        <ArrowRight />
-                                    </Link>
-                                </Button>
-                            </div>
-
-                            <div className="grid gap-3 p-4 sm:p-5">
-                                {tasks.length === 0 ? (
-                                    <EmptyState
-                                        icon={CheckCircle2}
-                                        title="You are all caught up"
-                                        description="New assignments from your supervisor will appear here."
-                                        compact
-                                    />
-                                ) : (
-                                    tasks.map((task) => (
-                                        <Link
-                                            key={task.id}
-                                            href={tasksIndex()}
-                                            className="flex items-start gap-3 rounded-2xl border bg-background/70 p-4 transition-colors hover:border-primary/25 hover:bg-primary/4"
-                                        >
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block font-medium">
-                                                    {task.title}
-                                                </span>
-                                                <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                                    <StatusBadge
-                                                        status={task.status}
-                                                    />
-                                                    {task.dueDate
-                                                        ? `Due ${formatDate(task.dueDate)}`
-                                                        : ''}
-                                                </span>
-                                            </span>
-                                            <ArrowRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <div className="grid items-start gap-5 lg:grid-cols-[1.35fr_0.65fr]">
+                    <section className="overflow-hidden rounded-3xl border bg-card/90 shadow-sm">
+                        <div className="border-b px-5 py-4 sm:px-6">
+                            <DashboardSectionHeader
+                                title="Current tasks"
+                                description="Focus on assignments that are waiting or already in progress."
+                                aside={
+                                    <Button variant="ghost" size="sm" asChild>
+                                        <Link href={tasksIndex()}>
+                                            View all <ArrowRight />
                                         </Link>
-                                    ))
-                                )}
-                            </div>
+                                    </Button>
+                                }
+                            />
+                        </div>
 
-                            <div className="grid grid-cols-3 border-t bg-muted/20">
-                                <TaskCount
-                                    value={taskSummary.notStarted}
-                                    label="Waiting"
+                        <div className="grid gap-3 p-4 sm:p-5">
+                            {tasks.length === 0 ? (
+                                <EmptyState
+                                    icon={CheckCircle2}
+                                    title="You are all caught up"
+                                    description="New assignments from your supervisor will appear here."
+                                    compact
                                 />
-                                <TaskCount
-                                    value={taskSummary.ongoing}
-                                    label="Ongoing"
-                                />
-                                <TaskCount
-                                    value={taskSummary.finished}
-                                    label="Finished"
-                                />
-                            </div>
+                            ) : (
+                                tasks.map((task) => (
+                                    <Link
+                                        key={task.id}
+                                        href={tasksIndex()}
+                                        className="flex items-start gap-3 rounded-2xl border bg-background/70 p-4 transition-colors hover:border-primary/25 hover:bg-primary/4"
+                                    >
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block font-medium">
+                                                {task.title}
+                                            </span>
+                                            <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                                <StatusBadge
+                                                    status={task.status}
+                                                />
+                                                {task.dueDate
+                                                    ? `Due ${formatDate(task.dueDate)}`
+                                                    : ''}
+                                            </span>
+                                        </span>
+                                        <ArrowRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                                    </Link>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-3 border-t bg-muted/20">
+                            <TaskCount
+                                value={taskSummary.notStarted}
+                                label="Waiting"
+                            />
+                            <TaskCount
+                                value={taskSummary.ongoing}
+                                label="Ongoing"
+                            />
+                            <TaskCount
+                                value={taskSummary.finished}
+                                label="Finished"
+                            />
+                        </div>
+                    </section>
+
+                    <div className="grid gap-5">
+                        <SupervisorCard supervisor={supervisor} />
+
+                        <section className="rounded-3xl border bg-card/90 p-5 shadow-sm">
+                            <h2 className="flex items-center gap-2 font-semibold">
+                                <CheckCircle2 className="size-4 text-primary" />{' '}
+                                Onboarding
+                            </h2>
+                            {onboarding.length === 0 ? (
+                                <p className="mt-3 text-sm text-muted-foreground">
+                                    No onboarding requirements assigned.
+                                </p>
+                            ) : (
+                                <div className="mt-4 grid gap-2">
+                                    {onboarding.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="flex items-start gap-2 rounded-xl border p-3 text-sm"
+                                        >
+                                            <CheckCircle2
+                                                className={`mt-0.5 size-4 shrink-0 ${item.completedAt ? 'text-emerald-500' : 'text-muted-foreground'}`}
+                                            />
+                                            <span
+                                                className={
+                                                    item.completedAt
+                                                        ? 'line-through opacity-70'
+                                                        : ''
+                                                }
+                                            >
+                                                {item.title}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </section>
 
-                        <div className="grid gap-5">
-                            <SupervisorCard supervisor={supervisor} />
-
-                            <section className="rounded-3xl border bg-card/90 p-5 shadow-sm">
-                                <h2 className="flex items-center gap-2 font-semibold">
-                                    <BriefcaseBusiness className="size-4 text-primary" />
-                                    Your placement
-                                </h2>
-                                <dl className="mt-4 grid gap-3 text-sm">
-                                    <Detail
-                                        label="Student ID"
-                                        value={user.student_id}
-                                    />
-                                    <Detail
-                                        label="Position"
-                                        value={user.position}
-                                    />
-                                    <Detail
-                                        label="Department"
-                                        value={user.department}
-                                    />
-                                    <Detail
-                                        label="Company"
-                                        value={user.company}
-                                    />
-                                </dl>
-                            </section>
-                        </div>
+                        <section className="rounded-3xl border bg-card/90 p-5 shadow-sm">
+                            <h2 className="flex items-center gap-2 font-semibold">
+                                <BriefcaseBusiness className="size-4 text-primary" />
+                                Your placement
+                            </h2>
+                            <dl className="mt-4 grid gap-3 text-sm">
+                                <Detail
+                                    label="Student ID"
+                                    value={user.student_id}
+                                />
+                                <Detail
+                                    label="Position"
+                                    value={user.position}
+                                />
+                                <Detail
+                                    label="Department"
+                                    value={user.department}
+                                />
+                                <Detail label="Company" value={user.company} />
+                            </dl>
+                        </section>
                     </div>
                 </div>
-            </div>
+
+                {recentFeedback.length > 0 && (
+                    <section className="rounded-3xl border bg-card/90 p-5 shadow-sm sm:p-6">
+                        <h2 className="flex items-center gap-2 font-semibold">
+                            <Star className="size-4 text-primary" /> Recent
+                            supervisor feedback
+                        </h2>
+                        <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            {recentFeedback.map((item) => (
+                                <article
+                                    key={item.id}
+                                    className="rounded-2xl border bg-background/70 p-4"
+                                >
+                                    <div className="flex justify-between gap-2">
+                                        <p className="font-medium capitalize">
+                                            {item.category.replaceAll('_', ' ')}
+                                        </p>
+                                        <span className="text-sm text-amber-500">
+                                            {item.rating}/5
+                                        </span>
+                                    </div>
+                                    <p className="mt-2 text-sm text-muted-foreground">
+                                        {item.comments}
+                                    </p>
+                                    <p className="mt-3 text-xs text-muted-foreground">
+                                        {item.supervisorName}
+                                    </p>
+                                </article>
+                            ))}
+                        </div>
+                    </section>
+                )}
+            </DashboardWorkspace>
         </>
     );
 }

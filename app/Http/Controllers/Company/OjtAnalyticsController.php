@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Company;
 
+use App\Actions\AssessOjtRisk;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\CompletionCertificate;
@@ -15,7 +16,7 @@ use Inertia\Response;
 
 class OjtAnalyticsController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, AssessOjtRisk $assessRisk): Response
     {
         /** @var User $administrator */
         $administrator = $request->user();
@@ -56,6 +57,7 @@ class OjtAnalyticsController extends Controller
             ->withCount([
                 'dailyReports as pending_reports_count' => fn ($query) => $query->where('approval_status', DailyReport::STATUS_PENDING),
                 'dailyReports as late_days_count' => fn ($query) => $query->where('attendance_status', DailyReport::ATTENDANCE_LATE),
+                'assignedTasks as unfinished_tasks_count' => fn ($query) => $query->whereIn('status', ['not_started', 'ongoing']),
             ])
             ->orderBy('name')
             ->paginate(25)
@@ -94,7 +96,7 @@ class OjtAnalyticsController extends Controller
                 return array_values(array_unique($dates));
             });
 
-        $ojts->through(function (User $ojt) use ($today, $monthStart, $reportDatesByUser, $holidayDates, $leaveDatesByUser, $company): array {
+        $ojts->through(function (User $ojt) use ($today, $monthStart, $reportDatesByUser, $holidayDates, $leaveDatesByUser, $company, $assessRisk): array {
             $approved = (float) ($ojt->getAttribute('approved_hours') ?? 0);
             $finalized = (float) ($ojt->getAttribute('finalized_certificate_hours') ?? 0);
             $reserved = (float) ($ojt->getAttribute('reserved_certificate_hours') ?? 0);
@@ -113,6 +115,15 @@ class OjtAnalyticsController extends Controller
                 }
             }
 
+            $completionPercentage = min(100, ($approved / max(1, (float) ($ojt->required_hours ?? 0))) * 100);
+            $risk = $assessRisk->handle(
+                $missingWorkdays,
+                (int) $ojt->getAttribute('pending_reports_count'),
+                (int) $ojt->getAttribute('late_days_count'),
+                (int) $ojt->getAttribute('unfinished_tasks_count'),
+                $completionPercentage,
+            );
+
             return [
                 'id' => $ojt->id,
                 'name' => $ojt->name,
@@ -129,6 +140,7 @@ class OjtAnalyticsController extends Controller
                 'pendingReports' => (int) $ojt->getAttribute('pending_reports_count'),
                 'lateDays' => (int) $ojt->getAttribute('late_days_count'),
                 'missingWorkdays' => $missingWorkdays,
+                'risk' => $risk,
             ];
         });
 

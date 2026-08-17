@@ -30,6 +30,11 @@ class DailyReport extends Model
     protected $fillable = [
         'report_date',
         'time_in',
+        'verification_method',
+        'verified_at',
+        'verification_latitude',
+        'verification_longitude',
+        'verification_distance_meters',
         'scheduled_time_in',
         'scheduled_grace_minutes',
         'attendance_status',
@@ -52,6 +57,10 @@ class DailyReport extends Model
             'reviewed_at' => 'datetime',
             'late_minutes' => 'integer',
             'scheduled_grace_minutes' => 'integer',
+            'verified_at' => 'datetime',
+            'verification_latitude' => 'decimal:7',
+            'verification_longitude' => 'decimal:7',
+            'verification_distance_meters' => 'integer',
         ];
     }
 

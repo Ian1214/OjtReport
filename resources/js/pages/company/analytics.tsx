@@ -5,11 +5,13 @@ import {
     ChartNoAxesCombined,
     CheckCircle2,
     Clock3,
+    Download,
     UsersRound,
 } from 'lucide-react';
 import { DashboardHero } from '@/components/dashboard-ui';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { complianceEvidence } from '@/routes/company/analytics';
 
 type OjtMetric = {
     id: number;
@@ -25,6 +27,12 @@ type OjtMetric = {
     pendingReports: number;
     lateDays: number;
     missingWorkdays: number;
+    risk: {
+        level: 'low' | 'medium' | 'high';
+        score: number;
+        signals: string[];
+        recommendedAction: string;
+    };
 };
 
 type Props = {
@@ -59,6 +67,13 @@ export default function CompanyAnalytics({
                     eyebrow="Workforce intelligence"
                     title="OJT analytics"
                     description={`A clear operational view of ${companyName}'s attendance, approved hours, and certificate readiness.`}
+                    actions={
+                        <Button variant="outline" asChild>
+                            <a href={complianceEvidence.url()}>
+                                <Download /> Export compliance evidence
+                            </a>
+                        </Button>
+                    }
                 />
 
                 <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -116,7 +131,7 @@ export default function CompanyAnalytics({
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[980px] text-sm">
+                            <table className="w-full min-w-[1120px] text-sm">
                                 <thead className="bg-muted/45 text-left text-xs tracking-wide text-muted-foreground uppercase">
                                     <tr>
                                         <th className="px-5 py-3">
@@ -134,6 +149,9 @@ export default function CompanyAnalytics({
                                         </th>
                                         <th className="px-4 py-3 text-center">
                                             Missing days
+                                        </th>
+                                        <th className="px-4 py-3">
+                                            Risk signals
                                         </th>
                                     </tr>
                                 </thead>
@@ -196,6 +214,27 @@ export default function CompanyAnalytics({
                                                     ojt.missingWorkdays > 0
                                                 }
                                             />
+                                            <td className="px-4 py-4">
+                                                <Badge
+                                                    variant="outline"
+                                                    className={
+                                                        ojt.risk.level ===
+                                                        'high'
+                                                            ? 'border-destructive/30 text-destructive'
+                                                            : ojt.risk.level ===
+                                                                'medium'
+                                                              ? 'border-amber-500/30 text-amber-500'
+                                                              : 'border-emerald-500/30 text-emerald-500'
+                                                    }
+                                                >
+                                                    {ojt.risk.level} ·{' '}
+                                                    {ojt.risk.score}
+                                                </Badge>
+                                                <p className="mt-2 max-w-64 text-xs leading-5 text-muted-foreground">
+                                                    {ojt.risk.signals[0] ??
+                                                        'No concerning pattern detected.'}
+                                                </p>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

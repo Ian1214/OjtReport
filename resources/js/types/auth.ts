@@ -2,7 +2,8 @@ export type User = {
     id: number;
     name: string;
     company_id: number | null;
-    role: 'company_admin' | 'supervisor' | 'ojt';
+    school_id: number | null;
+    role: 'company_admin' | 'supervisor' | 'ojt' | 'school_coordinator';
     supervisor_id: number | null;
     must_change_password: boolean;
     student_id: string | null;

@@ -32,6 +32,11 @@ class DtrSubmissionController extends Controller
             'ojt' => $query->where('user_id', $user->id),
             'supervisor' => $query->whereHas('user', fn (Builder $builder): Builder => $builder->where('supervisor_id', $user->id)),
             'company_admin' => $query->where('company_id', $user->company_id),
+            'school_coordinator' => $query
+                ->where('status', DtrSubmission::STATUS_APPROVED)
+                ->whereHas('user', fn (Builder $builder): Builder => $builder
+                    ->where('school_id', $user->school_id)
+                    ->where('role', 'ojt')),
             default => abort(403),
         };
 
@@ -162,6 +167,8 @@ class DtrSubmissionController extends Controller
             'ojt' => $dtrSubmission->user_id === $viewer->id,
             'supervisor' => $dtrSubmission->user->supervisor_id === $viewer->id,
             'company_admin' => $dtrSubmission->company_id === $viewer->company_id,
+            'school_coordinator' => $viewer->school_id !== null
+                && $dtrSubmission->user->school_id === $viewer->school_id,
             default => false,
         };
 

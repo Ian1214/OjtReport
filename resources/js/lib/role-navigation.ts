@@ -1,13 +1,18 @@
 import {
     Bell,
     Award,
+    BadgeCheck,
+    BookOpenCheck,
+    Building2,
     CalendarCheck2,
     CalendarDays,
     CalendarSync,
     ChartNoAxesCombined,
     ClipboardList,
+    ClipboardCheck,
     Clock8,
     FileCheck2,
+    FolderLock,
     History,
     LayoutGrid,
     ListChecks,
@@ -15,6 +20,7 @@ import {
     Palette,
     ServerCog,
     ShieldCheck,
+    School,
     UserRound,
     UsersRound,
 } from 'lucide-react';
@@ -28,14 +34,21 @@ import { index as analyticsIndex } from '@/routes/company/analytics';
 import { index as approvalInbox } from '@/routes/company/approvals';
 import { index as attendanceMonitorIndex } from '@/routes/company/attendance-monitor';
 import { edit as attendancePolicy } from '@/routes/company/attendance-policy';
+import { index as departmentsIndex } from '@/routes/company/departments';
 import { index as managedOjtsIndex } from '@/routes/company/ojts';
 import { index as operationsIndex } from '@/routes/company/operations';
+import { index as schoolAccessIndex } from '@/routes/company/school-access';
+import { index as documentsIndex } from '@/routes/documents';
 import { index as dtrSubmissionsIndex } from '@/routes/dtr-submissions';
+import { index as evaluationsIndex } from '@/routes/evaluations';
 import { index as leaveIndex } from '@/routes/leave';
 import { index as messagesIndex } from '@/routes/messages';
 import { index as notificationsIndex } from '@/routes/notifications';
+import { index as passportsIndex } from '@/routes/passports';
 import { edit as profileSettings } from '@/routes/profile';
 import { index as reportsIndex } from '@/routes/reports';
+import { dashboard as schoolDashboard } from '@/routes/school';
+import { index as curriculumOutcomesIndex } from '@/routes/school/curriculum-outcomes';
 import { edit as securitySettings } from '@/routes/security';
 import { dashboard as supervisorDashboard } from '@/routes/supervisor';
 import { index as tasksIndex } from '@/routes/tasks';
@@ -75,6 +88,24 @@ export function roleNavigation(
         title: 'Certificates',
         href: certificatesIndex(),
         icon: Award,
+    };
+    const evaluations: NavItem = {
+        title: 'Performance Evaluations',
+        mobileTitle: 'Evaluations',
+        href: evaluationsIndex(),
+        icon: ClipboardCheck,
+    };
+    const documents: NavItem = {
+        title: 'Document Vault',
+        mobileTitle: 'Documents',
+        href: documentsIndex(),
+        icon: FolderLock,
+    };
+    const passports: NavItem = {
+        title: 'Competency Passports',
+        mobileTitle: 'Passports',
+        href: passportsIndex(),
+        icon: BadgeCheck,
     };
     const accountSection: NavSection = {
         title: 'Account',
@@ -136,11 +167,28 @@ export function roleNavigation(
             sections: [
                 {
                     title: 'Workspace',
-                    items: [dashboardItem, ojtAccounts, analytics],
+                    items: [
+                        dashboardItem,
+                        ojtAccounts,
+                        {
+                            title: 'Departments',
+                            href: departmentsIndex(),
+                            icon: Building2,
+                        },
+                        analytics,
+                    ],
                 },
                 {
                     title: 'Review & Approval',
-                    items: [reviews, corrections, dtrSignOff, certificates],
+                    items: [
+                        reviews,
+                        corrections,
+                        evaluations,
+                        passports,
+                        dtrSignOff,
+                        certificates,
+                        documents,
+                    ],
                 },
                 {
                     title: 'Attendance',
@@ -162,6 +210,11 @@ export function roleNavigation(
                 {
                     title: 'Administration',
                     items: [
+                        {
+                            title: 'School Access',
+                            href: schoolAccessIndex(),
+                            icon: School,
+                        },
                         {
                             title: 'Audit Trail',
                             href: activityLogs(),
@@ -185,11 +238,26 @@ export function roleNavigation(
             moreSections: [
                 {
                     title: 'Workspace',
-                    items: [ojtAccounts, analytics],
+                    items: [
+                        ojtAccounts,
+                        {
+                            title: 'Departments',
+                            href: departmentsIndex(),
+                            icon: Building2,
+                        },
+                        analytics,
+                    ],
                 },
                 {
                     title: 'Review & Approval',
-                    items: [corrections, dtrSignOff, certificates],
+                    items: [
+                        corrections,
+                        evaluations,
+                        passports,
+                        dtrSignOff,
+                        certificates,
+                        documents,
+                    ],
                 },
                 {
                     title: 'Attendance',
@@ -210,6 +278,11 @@ export function roleNavigation(
                 {
                     title: 'Administration',
                     items: [
+                        {
+                            title: 'School Access',
+                            href: schoolAccessIndex(),
+                            icon: School,
+                        },
                         {
                             title: 'Audit Trail',
                             href: activityLogs(),
@@ -242,7 +315,10 @@ export function roleNavigation(
 
         return {
             sections: [
-                { title: 'Workspace', items: [myOjts, messages] },
+                {
+                    title: 'Workspace',
+                    items: [myOjts, evaluations, passports, messages],
+                },
                 {
                     title: 'Review & Approval',
                     items: [
@@ -258,7 +334,7 @@ export function roleNavigation(
                 },
                 { title: 'Updates', items: [notifications] },
             ],
-            primaryItems: [myOjts, messages, corrections, notifications],
+            primaryItems: [myOjts, evaluations, messages, notifications],
             moreSections: [
                 {
                     title: 'Review & Approval',
@@ -274,6 +350,56 @@ export function roleNavigation(
                 },
                 accountSection,
             ],
+        };
+    }
+
+    if (role === 'school_coordinator') {
+        const schoolPortal: NavItem = {
+            title: 'Student Oversight',
+            mobileTitle: 'Students',
+            href: schoolDashboard(),
+            icon: School,
+        };
+        const verifiedDtrs: NavItem = {
+            title: 'Verified DTRs',
+            mobileTitle: 'DTRs',
+            href: dtrSubmissionsIndex(),
+            icon: FileCheck2,
+        };
+
+        return {
+            sections: [
+                {
+                    title: 'School Workspace',
+                    items: [
+                        schoolPortal,
+                        {
+                            title: 'Curriculum Outcomes',
+                            mobileTitle: 'Outcomes',
+                            href: curriculumOutcomesIndex(),
+                            icon: BookOpenCheck,
+                        },
+                    ],
+                },
+                {
+                    title: 'Verified Records',
+                    items: [
+                        evaluations,
+                        passports,
+                        verifiedDtrs,
+                        certificates,
+                        documents,
+                    ],
+                },
+                { title: 'Updates', items: [notifications] },
+            ],
+            primaryItems: [
+                schoolPortal,
+                evaluations,
+                verifiedDtrs,
+                notifications,
+            ],
+            moreSections: [accountSection],
         };
     }
 
@@ -312,8 +438,11 @@ export function roleNavigation(
             {
                 title: 'Records',
                 items: [
+                    evaluations,
+                    passports,
                     dtrSignOff,
                     certificates,
+                    documents,
                     corrections,
                     { title: 'Leave', href: leaveIndex(), icon: CalendarDays },
                 ],
@@ -326,8 +455,11 @@ export function roleNavigation(
                 title: 'Records',
                 items: [
                     tasks,
+                    evaluations,
+                    passports,
                     dtrSignOff,
                     certificates,
+                    documents,
                     corrections,
                     { title: 'Leave', href: leaveIndex(), icon: CalendarDays },
                 ],

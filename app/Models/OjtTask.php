@@ -6,6 +6,7 @@ use Database\Factories\OjtTaskFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class OjtTask extends Model
 {
@@ -27,5 +28,10 @@ class OjtTask extends Model
     public function supervisor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
+    public function curriculumOutcomes(): BelongsToMany
+    {
+        return $this->belongsToMany(CurriculumOutcome::class);
     }
 }

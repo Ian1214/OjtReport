@@ -64,10 +64,14 @@ export function AppSidebar() {
     );
 }
 
-function workspaceLabel(role: 'company_admin' | 'supervisor' | 'ojt'): string {
+function workspaceLabel(
+    role: 'company_admin' | 'supervisor' | 'ojt' | 'school_coordinator',
+): string {
     return role === 'company_admin'
         ? 'Company workspace'
         : role === 'supervisor'
           ? 'Supervisor workspace'
-          : 'OJT workspace';
+          : role === 'school_coordinator'
+            ? 'School workspace'
+            : 'OJT workspace';
 }

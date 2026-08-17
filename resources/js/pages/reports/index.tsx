@@ -10,10 +10,12 @@ import {
     LogOut,
     Pencil,
     Printer,
+    MapPin,
+    WifiOff,
     Trash2,
     XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { store as storeCorrection } from '@/actions/App/Http/Controllers/AttendanceCorrectionController';
 import { storeHistorical } from '@/actions/App/Http/Controllers/DailyReportController';
 import InputError from '@/components/input-error';
@@ -82,6 +84,8 @@ type Props = {
     attendancePolicy: {
         workStartTime: string;
         graceMinutes: number;
+        verificationMode:
+            'disabled' | 'qr' | 'geolocation' | 'qr_and_geolocation';
     };
     historicalEntry: {
         earliestDate: string | null;
@@ -146,7 +150,11 @@ export default function ReportsIndex({
                         </div>
 
                         {activeReport === null ? (
-                            <TimeInForm />
+                            <TimeInForm
+                                verificationMode={
+                                    attendancePolicy.verificationMode
+                                }
+                            />
                         ) : activeReport.time_out === null ? (
                             <TimeOutForm activeReport={activeReport} />
                         ) : (
@@ -480,7 +488,36 @@ function HistoricalReportCard({
     );
 }
 
-function TimeInForm() {
+function TimeInForm({
+    verificationMode,
+}: {
+    verificationMode: Props['attendancePolicy']['verificationMode'];
+}) {
+    const needsLocation = ['geolocation', 'qr_and_geolocation'].includes(
+        verificationMode,
+    );
+    const [location, setLocation] = useState<{
+        latitude: number;
+        longitude: number;
+    } | null>(null);
+    const [locationError, setLocationError] = useState('');
+
+    const requestLocation = () => {
+        setLocationError('');
+        navigator.geolocation?.getCurrentPosition(
+            ({ coords }) =>
+                setLocation({
+                    latitude: coords.latitude,
+                    longitude: coords.longitude,
+                }),
+            () =>
+                setLocationError(
+                    'Location could not be read. Enable location permission and try again.',
+                ),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+        );
+    };
+
     return (
         <Form {...timeIn.form()} className="grid gap-3">
             {({ errors, processing }) => (
@@ -490,10 +527,66 @@ function TimeInForm() {
                         and time will be recorded automatically.
                     </p>
                     <InputError message={errors.attendance} />
+                    {needsLocation && (
+                        <div className="grid gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                            <p className="text-sm">
+                                <strong>
+                                    Location verification is enabled.
+                                </strong>{' '}
+                                Your location is checked once for this time-in
+                                and is not continuously tracked.
+                            </p>
+                            <label className="flex items-start gap-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    name="location_consent"
+                                    value="1"
+                                    required
+                                    className="mt-1"
+                                />{' '}
+                                I consent to sharing my current location for
+                                this attendance check.
+                            </label>
+                            <input
+                                type="hidden"
+                                name="latitude"
+                                value={location?.latitude ?? ''}
+                            />
+                            <input
+                                type="hidden"
+                                name="longitude"
+                                value={location?.longitude ?? ''}
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={requestLocation}
+                            >
+                                <MapPin />
+                                {location
+                                    ? 'Location ready'
+                                    : 'Get my location'}
+                            </Button>
+                            {locationError && (
+                                <p className="text-sm text-destructive">
+                                    {locationError}
+                                </p>
+                            )}
+                            <InputError message={errors.location_consent} />
+                        </div>
+                    )}
+                    {verificationMode.includes('qr') && (
+                        <p className="text-sm text-muted-foreground">
+                            Scan the current company QR code first, then return
+                            here to time in.
+                        </p>
+                    )}
                     <Button
                         type="submit"
                         className="w-full sm:w-auto"
-                        disabled={processing}
+                        disabled={
+                            processing || (needsLocation && location === null)
+                        }
                     >
                         {processing ? <Spinner /> : <LogIn />}
                         Time in now
@@ -541,8 +634,26 @@ function TimeOutForm({ activeReport }: { activeReport: ActiveReport }) {
 }
 
 function SummaryForm({ activeReport }: { activeReport: ActiveReport }) {
+    const draftKey = `ojt-report-draft-${activeReport.id}`;
+    const [summary, setSummary] = useState(
+        () => localStorage.getItem(draftKey) ?? '',
+    );
+
+    useEffect(() => {
+        const timeout = window.setTimeout(
+            () => localStorage.setItem(draftKey, summary),
+            250,
+        );
+
+        return () => window.clearTimeout(timeout);
+    }, [draftKey, summary]);
+
     return (
-        <Form {...complete.form(activeReport.id)} className="grid gap-5">
+        <Form
+            {...complete.form(activeReport.id)}
+            className="grid gap-5"
+            onSuccess={() => localStorage.removeItem(draftKey)}
+        >
             {({ errors, processing }) => (
                 <>
                     <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
@@ -566,9 +677,15 @@ function SummaryForm({ activeReport }: { activeReport: ActiveReport }) {
                             name="summary"
                             rows={7}
                             required
+                            value={summary}
+                            onChange={(event) => setSummary(event.target.value)}
                             placeholder="Describe the tasks you completed, what you learned, and any issues you encountered."
                             className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         />
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <WifiOff className="size-3.5" /> Draft saved on this
+                            device and survives connection interruptions.
+                        </div>
                         <InputError
                             message={errors.summary ?? errors.attendance}
                         />

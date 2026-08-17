@@ -22,7 +22,15 @@ services:
         networks:
             - sail
         depends_on:
-            - mysql
+            mysql:
+                condition: service_healthy
+        restart: unless-stopped
+        healthcheck:
+            test: ['CMD-SHELL', 'curl --fail --silent http://127.0.0.1/up > /dev/null || exit 1']
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 30s
     queue:
         build:
             context: './vendor/laravel/sail/runtimes/8.5'
@@ -31,6 +39,26 @@ services:
                 WWWGROUP: '${WWWGROUP}'
         image: 'sail-8.5/app'
         command: php artisan queue:work --sleep=3 --tries=3 --timeout=60 --max-time=3600
+        restart: unless-stopped
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            mysql:
+                condition: service_healthy
+        stop_grace_period: 30s
+    scheduler:
+        build:
+            context: './vendor/laravel/sail/runtimes/8.5'
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: 'sail-8.5/app'
+        command: php artisan schedule:work
         restart: unless-stopped
         environment:
             WWWUSER: '${WWWUSER}'

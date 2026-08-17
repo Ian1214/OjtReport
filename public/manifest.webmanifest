@@ -1,0 +1,9 @@
+{
+  "name": "OJT Report Management System",
+  "short_name": "OJT Report",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#071013",
+  "theme_color": "#071a1f",
+  "icons": [{ "src": "/ojt-report-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+}

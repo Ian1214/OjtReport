@@ -14,7 +14,11 @@ import {
 import { useState } from 'react';
 import { store } from '@/actions/App/Http/Controllers/SupervisorTaskController';
 import {
+    DashboardHero,
+    DashboardSectionHeader,
+    DashboardWorkspace,
     EmptyState,
+    MetricCard,
     NextActionCard,
     StatusBadge,
 } from '@/components/dashboard-ui';
@@ -38,6 +42,7 @@ type Task = {
     description: string | null;
     status: 'not_started' | 'ongoing' | 'finished';
     dueDate: string | null;
+    outcomes: { code: string; title: string }[];
 };
 
 type Ojt = {
@@ -50,6 +55,7 @@ type Ojt = {
     isOnline: boolean;
     lastSeenAt: string | null;
     unreadCount: number;
+    outcomes: { id: number; code: string; title: string }[];
     tasks: Task[];
 };
 
@@ -76,29 +82,19 @@ export default function SupervisorDashboard({ ojts }: { ojts: Ojt[] }) {
         <>
             <Head title="My OJTs" />
 
-            <div className="flex flex-1 flex-col bg-[radial-gradient(circle_at_top_right,color-mix(in_oklab,var(--primary)_7%,transparent),transparent_42%)] p-4 sm:p-6">
-                <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-                    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                            <p className="text-xs font-semibold tracking-[0.16em] text-primary uppercase">
-                                Supervisor workspace
-                            </p>
-                            <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
-                                Good day, {firstName(auth.user.name)}
-                            </h1>
-                            <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-                                Select an OJT to assign work, view reports, or
-                                send a message.
-                            </p>
-                        </div>
+            <DashboardWorkspace>
+                <DashboardHero
+                    eyebrow="Supervisor workspace"
+                    title={`Good day, ${firstName(auth.user.name)}`}
+                    description="Guide your assigned OJTs, monitor task progress, review reports, and respond to messages from one workspace."
+                    actions={
                         <Button
                             variant="outline"
                             asChild
                             className="w-full sm:w-auto"
                         >
                             <Link href={messagesIndex()}>
-                                <MessageCircle />
-                                Open messages
+                                <MessageCircle /> Open messages
                                 {navigation.unreadMessagesCount > 0 && (
                                     <Badge>
                                         {navigation.unreadMessagesCount}
@@ -106,162 +102,154 @@ export default function SupervisorDashboard({ ojts }: { ojts: Ojt[] }) {
                                 )}
                             </Link>
                         </Button>
-                    </header>
+                    }
+                />
 
-                    <NextActionCard
-                        icon={
-                            navigation.unreadMessagesCount > 0
-                                ? MessageCircle
-                                : ojts.length === 0
-                                  ? UsersRound
-                                  : ClipboardList
-                        }
-                        title={
-                            navigation.unreadMessagesCount > 0
-                                ? `${navigation.unreadMessagesCount} unread ${navigation.unreadMessagesCount === 1 ? 'message' : 'messages'}`
-                                : ojts.length === 0
-                                  ? 'Waiting for an OJT assignment'
-                                  : openTaskCount > 0
-                                    ? `${openTaskCount} open ${openTaskCount === 1 ? 'task' : 'tasks'} to monitor`
-                                    : 'Your OJT team is on track'
-                        }
-                        description={
-                            navigation.unreadMessagesCount > 0
-                                ? 'An OJT may be waiting for your guidance. Open the conversation to respond.'
-                                : ojts.length === 0
-                                  ? 'A company administrator needs to assign an OJT before you can manage tasks and reports.'
-                                  : openTaskCount > 0
-                                    ? 'Open an OJT workspace to review progress, assign work, or check submitted reports.'
-                                    : 'There are no open tasks. Check in with your assigned OJTs when needed.'
-                        }
-                        tone={
-                            navigation.unreadMessagesCount > 0
-                                ? 'warning'
-                                : ojts.length === 0
-                                  ? 'primary'
-                                  : 'success'
-                        }
-                        status={
-                            <StatusBadge
-                                status={
-                                    navigation.unreadMessagesCount > 0
-                                        ? 'pending'
-                                        : ojts.length === 0
-                                          ? 'not_started'
-                                          : openTaskCount > 0
-                                            ? 'ongoing'
-                                            : 'approved'
-                                }
-                                label={
-                                    navigation.unreadMessagesCount > 0
-                                        ? 'Response needed'
-                                        : ojts.length === 0
-                                          ? 'Assignment needed'
-                                          : openTaskCount > 0
-                                            ? 'Work in progress'
-                                            : 'All clear'
-                                }
-                            />
-                        }
-                        action={
-                            navigation.unreadMessagesCount > 0 ? (
-                                <Button variant="outline" asChild>
-                                    <Link href={messagesIndex()}>
-                                        Open messages
-                                        <ArrowRight />
-                                    </Link>
-                                </Button>
-                            ) : priorityOjt ? (
-                                <Button
-                                    variant="outline"
-                                    onClick={() =>
-                                        setExpandedOjtId(priorityOjt.id)
-                                    }
-                                >
-                                    Open OJT workspace
+                <NextActionCard
+                    icon={
+                        navigation.unreadMessagesCount > 0
+                            ? MessageCircle
+                            : ojts.length === 0
+                              ? UsersRound
+                              : ClipboardList
+                    }
+                    title={
+                        navigation.unreadMessagesCount > 0
+                            ? `${navigation.unreadMessagesCount} unread ${navigation.unreadMessagesCount === 1 ? 'message' : 'messages'}`
+                            : ojts.length === 0
+                              ? 'Waiting for an OJT assignment'
+                              : openTaskCount > 0
+                                ? `${openTaskCount} open ${openTaskCount === 1 ? 'task' : 'tasks'} to monitor`
+                                : 'Your OJT team is on track'
+                    }
+                    description={
+                        navigation.unreadMessagesCount > 0
+                            ? 'An OJT may be waiting for your guidance. Open the conversation to respond.'
+                            : ojts.length === 0
+                              ? 'A company administrator needs to assign an OJT before you can manage tasks and reports.'
+                              : openTaskCount > 0
+                                ? 'Open an OJT workspace to review progress, assign work, or check submitted reports.'
+                                : 'There are no open tasks. Check in with your assigned OJTs when needed.'
+                    }
+                    tone={
+                        navigation.unreadMessagesCount > 0
+                            ? 'warning'
+                            : ojts.length === 0
+                              ? 'primary'
+                              : 'success'
+                    }
+                    status={
+                        <StatusBadge
+                            status={
+                                navigation.unreadMessagesCount > 0
+                                    ? 'pending'
+                                    : ojts.length === 0
+                                      ? 'not_started'
+                                      : openTaskCount > 0
+                                        ? 'ongoing'
+                                        : 'approved'
+                            }
+                            label={
+                                navigation.unreadMessagesCount > 0
+                                    ? 'Response needed'
+                                    : ojts.length === 0
+                                      ? 'Assignment needed'
+                                      : openTaskCount > 0
+                                        ? 'Work in progress'
+                                        : 'All clear'
+                            }
+                        />
+                    }
+                    action={
+                        navigation.unreadMessagesCount > 0 ? (
+                            <Button variant="outline" asChild>
+                                <Link href={messagesIndex()}>
+                                    Open messages
                                     <ArrowRight />
-                                </Button>
-                            ) : undefined
-                        }
+                                </Link>
+                            </Button>
+                        ) : priorityOjt ? (
+                            <Button
+                                variant="outline"
+                                onClick={() => setExpandedOjtId(priorityOjt.id)}
+                            >
+                                Open OJT workspace
+                                <ArrowRight />
+                            </Button>
+                        ) : undefined
+                    }
+                />
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                    <MetricCard
+                        icon={UsersRound}
+                        value={ojts.length}
+                        label="Assigned OJTs"
+                        detail="People under your supervision"
                     />
+                    <MetricCard
+                        icon={ClipboardList}
+                        value={openTaskCount}
+                        label="Open tasks"
+                        detail="Waiting or currently ongoing"
+                    />
+                    <MetricCard
+                        icon={CheckCircle2}
+                        value={onlineCount}
+                        label="Online now"
+                        detail="Available in the system"
+                        accent="success"
+                    />
+                </div>
 
-                    <div className="grid gap-3 sm:grid-cols-3">
-                        <SummaryCard
-                            icon={UsersRound}
-                            value={ojts.length}
-                            label="Assigned OJTs"
-                            detail="People under your supervision"
-                        />
-                        <SummaryCard
-                            icon={ClipboardList}
-                            value={openTaskCount}
-                            label="Open tasks"
-                            detail="Waiting or currently ongoing"
-                        />
-                        <SummaryCard
-                            icon={CheckCircle2}
-                            value={onlineCount}
-                            label="Online now"
-                            detail="Available in the system"
-                        />
-                    </div>
-
-                    <section>
-                        <div className="flex items-end justify-between gap-4">
-                            <div>
-                                <h2 className="text-lg font-semibold">
-                                    Your OJTs
-                                </h2>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    Each card keeps reports, messages, and tasks
-                                    together.
-                                </p>
-                            </div>
+                <section>
+                    <DashboardSectionHeader
+                        title="Your OJT team"
+                        description="Each workspace keeps reports, conversations, and assigned tasks together."
+                        aside={
                             <Badge variant="secondary">
                                 {ojts.length} total
                             </Badge>
-                        </div>
+                        }
+                    />
 
-                        {ojts.length === 0 ? (
-                            <EmptyState
-                                icon={UsersRound}
-                                title="No OJTs assigned yet"
-                                description="Ask the company administrator to assign an OJT to your supervisor account."
-                                className="mt-4"
-                            />
-                        ) : (
-                            <div className="mt-4 grid items-start gap-4 xl:grid-cols-2">
-                                {ojts.map((ojt) => (
-                                    <OjtCard
-                                        key={ojt.id}
-                                        ojt={ojt}
-                                        expanded={expandedOjtId === ojt.id}
-                                        taskFormOpen={taskFormOjtId === ojt.id}
-                                        onToggle={() => {
-                                            setExpandedOjtId(
-                                                expandedOjtId === ojt.id
-                                                    ? null
-                                                    : ojt.id,
-                                            );
-                                            setTaskFormOjtId(null);
-                                        }}
-                                        onToggleTaskForm={() =>
-                                            setTaskFormOjtId(
-                                                taskFormOjtId === ojt.id
-                                                    ? null
-                                                    : ojt.id,
-                                            )
-                                        }
-                                        onTaskCreated={() =>
-                                            setTaskFormOjtId(null)
-                                        }
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </section>
-                </div>
-            </div>
+                    {ojts.length === 0 ? (
+                        <EmptyState
+                            icon={UsersRound}
+                            title="No OJTs assigned yet"
+                            description="Ask the company administrator to assign an OJT to your supervisor account."
+                            className="mt-4"
+                        />
+                    ) : (
+                        <div className="mt-4 grid items-start gap-4 xl:grid-cols-2">
+                            {ojts.map((ojt) => (
+                                <OjtCard
+                                    key={ojt.id}
+                                    ojt={ojt}
+                                    expanded={expandedOjtId === ojt.id}
+                                    taskFormOpen={taskFormOjtId === ojt.id}
+                                    onToggle={() => {
+                                        setExpandedOjtId(
+                                            expandedOjtId === ojt.id
+                                                ? null
+                                                : ojt.id,
+                                        );
+                                        setTaskFormOjtId(null);
+                                    }}
+                                    onToggleTaskForm={() =>
+                                        setTaskFormOjtId(
+                                            taskFormOjtId === ojt.id
+                                                ? null
+                                                : ojt.id,
+                                        )
+                                    }
+                                    onTaskCreated={() => setTaskFormOjtId(null)}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </section>
+            </DashboardWorkspace>
         </>
     );
 }
@@ -374,7 +362,11 @@ function OjtCard({
                     </div>
 
                     {taskFormOpen && (
-                        <TaskForm ojtId={ojt.id} onSuccess={onTaskCreated} />
+                        <TaskForm
+                            ojtId={ojt.id}
+                            outcomes={ojt.outcomes}
+                            onSuccess={onTaskCreated}
+                        />
                     )}
 
                     {ojt.tasks.length === 0 ? (
@@ -408,6 +400,19 @@ function OjtCard({
                                             Due {formatDate(task.dueDate)}
                                         </p>
                                     )}
+                                    {task.outcomes.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                            {task.outcomes.map((outcome) => (
+                                                <span
+                                                    key={outcome.code}
+                                                    title={outcome.title}
+                                                    className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-medium text-cyan-500"
+                                                >
+                                                    {outcome.code}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </article>
                             ))}
                         </div>
@@ -420,9 +425,11 @@ function OjtCard({
 
 function TaskForm({
     ojtId,
+    outcomes,
     onSuccess,
 }: {
     ojtId: number;
+    outcomes: { id: number; code: string; title: string }[];
     onSuccess: () => void;
 }) {
     return (
@@ -467,6 +474,40 @@ function TaskForm({
                         />
                         <InputError message={errors.due_date} />
                     </div>
+                    {outcomes.length > 0 && (
+                        <fieldset className="grid gap-2">
+                            <legend className="text-sm font-medium">
+                                School learning outcomes (optional)
+                            </legend>
+                            <p className="text-xs text-muted-foreground">
+                                Link this work to the student&apos;s school
+                                curriculum. Completed work becomes verified
+                                passport evidence.
+                            </p>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                {outcomes.map((outcome) => (
+                                    <label
+                                        key={outcome.id}
+                                        className="flex min-h-11 items-start gap-2 rounded-xl border bg-background/80 p-3 text-sm"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            name="outcome_ids[]"
+                                            value={outcome.id}
+                                            className="mt-0.5 size-4 accent-primary"
+                                        />
+                                        <span>
+                                            <strong>{outcome.code}</strong>{' '}
+                                            <span className="text-muted-foreground">
+                                                {outcome.title}
+                                            </span>
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                            <InputError message={errors.outcome_ids} />
+                        </fieldset>
+                    )}
                     <div className="flex justify-end">
                         <Button type="submit" size="sm" disabled={processing}>
                             {processing && <Spinner />}
@@ -476,31 +517,6 @@ function TaskForm({
                 </>
             )}
         </Form>
-    );
-}
-
-function SummaryCard({
-    icon: Icon,
-    value,
-    label,
-    detail,
-}: {
-    icon: typeof UsersRound;
-    value: number;
-    label: string;
-    detail: string;
-}) {
-    return (
-        <div className="flex items-center gap-4 rounded-2xl border bg-card/90 p-4 shadow-sm sm:p-5">
-            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
-                <Icon className="size-5" />
-            </span>
-            <div>
-                <p className="text-2xl font-semibold">{value}</p>
-                <p className="text-sm font-medium">{label}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>
-            </div>
-        </div>
     );
 }
 

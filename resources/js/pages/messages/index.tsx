@@ -328,18 +328,25 @@ export default function Messages({ contacts, participant, messages }: Props) {
                                                             {message.editedAt &&
                                                                 ' · edited'}
                                                         </time>
-                                                        {message.isMine &&
-                                                            (message.isRead ? (
-                                                                <CheckCheck
-                                                                    className="size-3.5 text-sky-200"
-                                                                    aria-label="Read"
-                                                                />
-                                                            ) : (
-                                                                <Check
-                                                                    className="size-3.5"
-                                                                    aria-label="Sent"
-                                                                />
-                                                            ))}
+                                                        {message.isMine && (
+                                                            <span
+                                                                className={`inline-flex items-center gap-1 text-[11px] ${message.isRead ? 'text-sky-200' : 'text-primary-foreground/70'}`}
+                                                                aria-label={
+                                                                    message.isRead
+                                                                        ? 'Seen by recipient'
+                                                                        : 'Sent to recipient'
+                                                                }
+                                                            >
+                                                                {message.isRead ? (
+                                                                    <CheckCheck className="size-3.5" />
+                                                                ) : (
+                                                                    <Check className="size-3.5" />
+                                                                )}
+                                                                {message.isRead
+                                                                    ? 'Seen'
+                                                                    : 'Sent'}
+                                                            </span>
+                                                        )}
                                                         {message.isMine && (
                                                             <>
                                                                 {message.canEdit && (

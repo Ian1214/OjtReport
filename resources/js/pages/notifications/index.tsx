@@ -1,9 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { Bell, Check, CheckCheck, FileText } from 'lucide-react';
-import {
-    markAllRead,
-    markRead,
-} from '@/actions/App/Http/Controllers/NotificationController';
+import { Bell, CheckCheck, FileText } from 'lucide-react';
+import { markAllRead } from '@/actions/App/Http/Controllers/NotificationController';
 import { DashboardHero } from '@/components/dashboard-ui';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,11 +19,14 @@ type NotificationData = {
     correction_id?: number;
     title?: string;
     message?: string;
+    type?: string;
+    url?: string;
 };
 
 type NotificationItem = {
     id: string;
     data: NotificationData;
+    wasUnread: boolean;
     readAt: string | null;
     createdAt: string;
 };
@@ -147,13 +147,13 @@ function NotificationCard({
     notification: NotificationItem;
 }) {
     const isApproved = notification.data.status === 'approved';
-    const isUnread = notification.readAt === null;
+    const isNewlySeen = notification.wasUnread;
     const isCorrection = notification.data.correction_id !== undefined;
 
     return (
         <Card
             className={
-                isUnread
+                isNewlySeen
                     ? 'rounded-2xl border-primary/30 bg-primary/4'
                     : 'rounded-2xl'
             }
@@ -175,7 +175,7 @@ function NotificationCard({
                                 {notification.data.title ??
                                     `Report ${isApproved ? 'approved' : 'returned'}`}
                             </p>
-                            {isUnread && <Badge>New</Badge>}
+                            {isNewlySeen && <Badge>New</Badge>}
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">
                             {notification.data.message ?? (
@@ -211,29 +211,19 @@ function NotificationCard({
                     <Button variant="outline" size="sm" asChild>
                         <Link
                             href={
-                                isCorrection
+                                notification.data.url ??
+                                (isCorrection
                                     ? correctionsIndex()
-                                    : reportsIndex()
+                                    : reportsIndex())
                             }
                         >
-                            {isCorrection ? 'Open corrections' : 'Open reports'}
+                            {notification.data.type === 'overdue_onboarding'
+                                ? 'Open dashboard'
+                                : isCorrection
+                                  ? 'Open corrections'
+                                  : 'Open reports'}
                         </Link>
                     </Button>
-                    {isUnread && (
-                        <Form {...markRead.form(notification.id)}>
-                            {({ processing }) => (
-                                <Button
-                                    type="submit"
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={processing}
-                                >
-                                    {processing ? <Spinner /> : <Check />}
-                                    Mark read
-                                </Button>
-                            )}
-                        </Form>
-                    )}
                 </div>
             </CardContent>
         </Card>

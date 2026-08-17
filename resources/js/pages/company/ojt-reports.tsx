@@ -3,8 +3,13 @@ import {
     ArrowLeft,
     CalendarDays,
     CheckCircle2,
+    ClipboardCheck,
     Clock3,
     FileText,
+    FolderLock,
+    Plus,
+    Star,
+    Trash2,
     UserRound,
     XCircle,
 } from 'lucide-react';
@@ -12,6 +17,13 @@ import {
     approve,
     reject,
 } from '@/actions/App/Http/Controllers/Company/DailyReportReviewController';
+import { index as documentsIndex } from '@/actions/App/Http/Controllers/DocumentController';
+import {
+    destroy as destroyOnboarding,
+    store as storeOnboarding,
+    update as updateOnboarding,
+} from '@/actions/App/Http/Controllers/OnboardingChecklistController';
+import { store as storeFeedback } from '@/actions/App/Http/Controllers/SupervisorFeedbackController';
 import { DashboardHero, MetricCard } from '@/components/dashboard-ui';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +74,27 @@ type Props = {
     ojt: Ojt;
     reports: DailyReport[];
     viewer: 'company' | 'supervisor';
+    onboardingItems: OnboardingItem[];
+    feedback: FeedbackItem[];
+};
+
+type OnboardingItem = {
+    id: number;
+    title: string;
+    description: string | null;
+    dueDate: string | null;
+    completedAt: string | null;
+    completedBy: string | null;
+};
+
+type FeedbackItem = {
+    id: number;
+    category: string;
+    rating: number;
+    comments: string;
+    sharedWithSchool: boolean;
+    supervisorName: string;
+    createdAt: string;
 };
 
 export default function OjtReports({
@@ -69,6 +102,8 @@ export default function OjtReports({
     ojt,
     reports,
     viewer,
+    onboardingItems,
+    feedback,
 }: Props) {
     const isCompanyAdmin = viewer === 'company';
 
@@ -97,9 +132,25 @@ export default function OjtReports({
                     title={`${ojt.name}'s daily reports`}
                     description={`${ojt.studentId} · ${ojt.position} / ${ojt.department}. ${isCompanyAdmin ? 'Approve verified attendance or return a report for correction.' : 'You can monitor the reports of OJTs assigned to you.'}`}
                     actions={
-                        <Badge variant="secondary">
-                            {isCompanyAdmin ? 'Final reviewer' : 'View only'}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {isCompanyAdmin && (
+                                <Button variant="outline" asChild>
+                                    <Link
+                                        href={documentsIndex({
+                                            query: { ojt: ojt.id },
+                                        })}
+                                    >
+                                        <FolderLock /> View {ojt.name}'s
+                                        documents
+                                    </Link>
+                                </Button>
+                            )}
+                            <Badge variant="secondary">
+                                {isCompanyAdmin
+                                    ? 'Final reviewer'
+                                    : 'View only'}
+                            </Badge>
+                        </div>
                     }
                 />
 
@@ -118,6 +169,19 @@ export default function OjtReports({
                         icon={UserRound}
                         label="Required hours"
                         value={ojt.requiredHours}
+                    />
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-2">
+                    <OnboardingPanel
+                        ojt={ojt}
+                        items={onboardingItems}
+                        canManage={isCompanyAdmin}
+                    />
+                    <FeedbackPanel
+                        ojt={ojt}
+                        items={feedback}
+                        canAdd={!isCompanyAdmin}
                     />
                 </div>
 
@@ -294,6 +358,304 @@ export default function OjtReports({
                 </section>
             </div>
         </>
+    );
+}
+
+function OnboardingPanel({
+    ojt,
+    items,
+    canManage,
+}: {
+    ojt: Ojt;
+    items: OnboardingItem[];
+    canManage: boolean;
+}) {
+    const completed = items.filter((item) => item.completedAt).length;
+
+    return (
+        <section className="rounded-2xl border bg-card/80 p-5 shadow-sm sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <p className="flex items-center gap-2 font-semibold">
+                        <ClipboardCheck className="size-4 text-primary" />
+                        Onboarding checklist
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        {completed} of {items.length} requirements complete
+                    </p>
+                </div>
+                <Badge variant="secondary">
+                    {items.length === 0
+                        ? 'Not set'
+                        : `${Math.round((completed / items.length) * 100)}%`}
+                </Badge>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+                {items.length === 0 && (
+                    <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                        No onboarding requirements have been added.
+                    </div>
+                )}
+                {items.map((item) => (
+                    <div
+                        key={item.id}
+                        className="flex items-start gap-3 rounded-xl border bg-muted/15 p-3"
+                    >
+                        {canManage ? (
+                            <Form {...updateOnboarding.form(item.id)}>
+                                <input
+                                    type="hidden"
+                                    name="completed"
+                                    value={item.completedAt ? '0' : '1'}
+                                />
+                                <Button
+                                    type="submit"
+                                    size="icon"
+                                    variant="ghost"
+                                    aria-label={
+                                        item.completedAt
+                                            ? 'Reopen requirement'
+                                            : 'Complete requirement'
+                                    }
+                                >
+                                    <CheckCircle2
+                                        className={
+                                            item.completedAt
+                                                ? 'text-emerald-500'
+                                                : 'text-muted-foreground'
+                                        }
+                                    />
+                                </Button>
+                            </Form>
+                        ) : (
+                            <CheckCircle2
+                                className={`mt-2 size-4 ${item.completedAt ? 'text-emerald-500' : 'text-muted-foreground'}`}
+                            />
+                        )}
+                        <div className="min-w-0 flex-1">
+                            <p
+                                className={
+                                    item.completedAt
+                                        ? 'font-medium line-through opacity-70'
+                                        : 'font-medium'
+                                }
+                            >
+                                {item.title}
+                            </p>
+                            {item.description && (
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    {item.description}
+                                </p>
+                            )}
+                            <p className="mt-2 text-xs text-muted-foreground">
+                                {item.completedAt
+                                    ? `Completed${item.completedBy ? ` by ${item.completedBy}` : ''}`
+                                    : item.dueDate
+                                      ? `Due ${formatDate(item.dueDate)}`
+                                      : 'No due date'}
+                            </p>
+                        </div>
+                        {canManage && (
+                            <Form {...destroyOnboarding.form(item.id)}>
+                                <Button
+                                    type="submit"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-destructive"
+                                    aria-label="Delete requirement"
+                                >
+                                    <Trash2 />
+                                </Button>
+                            </Form>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {canManage && (
+                <Form
+                    {...storeOnboarding.form(ojt.id)}
+                    resetOnSuccess
+                    className="mt-5 grid gap-3 border-t pt-5"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <input
+                                    name="title"
+                                    required
+                                    maxLength={120}
+                                    placeholder="Requirement title"
+                                    className="h-10 rounded-md border bg-background px-3 text-sm"
+                                />
+                                <input
+                                    name="due_date"
+                                    type="date"
+                                    className="h-10 rounded-md border bg-background px-3 text-sm"
+                                />
+                            </div>
+                            <textarea
+                                name="description"
+                                rows={2}
+                                maxLength={1000}
+                                placeholder="Optional instructions"
+                                className="rounded-md border bg-background px-3 py-2 text-sm"
+                            />
+                            <InputError
+                                message={errors.title ?? errors.due_date}
+                            />
+                            <Button
+                                type="submit"
+                                variant="outline"
+                                disabled={processing}
+                                className="w-fit"
+                            >
+                                {processing ? <Spinner /> : <Plus />} Add
+                                requirement
+                            </Button>
+                        </>
+                    )}
+                </Form>
+            )}
+        </section>
+    );
+}
+
+function FeedbackPanel({
+    ojt,
+    items,
+    canAdd,
+}: {
+    ojt: Ojt;
+    items: FeedbackItem[];
+    canAdd: boolean;
+}) {
+    return (
+        <section className="rounded-2xl border bg-card/80 p-5 shadow-sm sm:p-6">
+            <div>
+                <p className="flex items-center gap-2 font-semibold">
+                    <Star className="size-4 text-primary" /> Supervisor feedback
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                    A dated coaching and progress timeline.
+                </p>
+            </div>
+            <div className="mt-5 grid max-h-80 gap-3 overflow-y-auto">
+                {items.length === 0 && (
+                    <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                        No supervisor feedback yet.
+                    </div>
+                )}
+                {items.map((item) => (
+                    <article
+                        key={item.id}
+                        className="rounded-xl border bg-muted/15 p-4"
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-medium capitalize">
+                                {item.category.replaceAll('_', ' ')}
+                            </p>
+                            <div
+                                className="flex items-center gap-1 text-amber-500"
+                                aria-label={`${item.rating} out of 5`}
+                            >
+                                {Array.from({ length: 5 }, (_, index) => (
+                                    <Star
+                                        key={index}
+                                        className={`size-3.5 ${index < item.rating ? 'fill-current' : ''}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            {item.comments}
+                        </p>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                            {item.supervisorName} ·{' '}
+                            {new Date(item.createdAt).toLocaleDateString()}{' '}
+                            {item.sharedWithSchool
+                                ? '· Shared with school'
+                                : ''}
+                        </p>
+                    </article>
+                ))}
+            </div>
+            {canAdd && (
+                <Form
+                    {...storeFeedback.form(ojt.id)}
+                    resetOnSuccess
+                    className="mt-5 grid gap-3 border-t pt-5"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <select
+                                    name="category"
+                                    required
+                                    defaultValue="progress"
+                                    className="h-10 rounded-md border bg-background px-3 text-sm"
+                                >
+                                    <option value="progress">Progress</option>
+                                    <option value="attendance">
+                                        Attendance
+                                    </option>
+                                    <option value="professionalism">
+                                        Professionalism
+                                    </option>
+                                    <option value="communication">
+                                        Communication
+                                    </option>
+                                    <option value="technical_skills">
+                                        Technical skills
+                                    </option>
+                                </select>
+                                <select
+                                    name="rating"
+                                    required
+                                    defaultValue="4"
+                                    className="h-10 rounded-md border bg-background px-3 text-sm"
+                                >
+                                    {[5, 4, 3, 2, 1].map((rating) => (
+                                        <option value={rating} key={rating}>
+                                            {rating} / 5
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <textarea
+                                name="comments"
+                                required
+                                rows={3}
+                                maxLength={2000}
+                                placeholder="Give specific, constructive feedback."
+                                className="rounded-md border bg-background px-3 py-2 text-sm"
+                            />
+                            <label className="flex items-center gap-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    name="shared_with_school"
+                                    value="1"
+                                    defaultChecked
+                                />{' '}
+                                Share with the assigned school coordinator
+                            </label>
+                            <InputError
+                                message={errors.comments ?? errors.rating}
+                            />
+                            <Button
+                                type="submit"
+                                disabled={processing}
+                                className="w-fit"
+                            >
+                                {processing ? <Spinner /> : <Plus />} Add
+                                feedback
+                            </Button>
+                        </>
+                    )}
+                </Form>
+            )}
+        </section>
     );
 }
 
