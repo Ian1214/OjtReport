@@ -4,8 +4,8 @@ use App\Http\Controllers\AttendanceCalendarController;
 use App\Http\Controllers\AttendanceCorrectionController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CertificateVerificationController;
-use App\Http\Controllers\Company\ActionCenterController;
 use App\Http\Controllers\Company\ActivityLogController;
+use App\Http\Controllers\Company\ActionCenterController;
 use App\Http\Controllers\Company\AttendanceMonitorController;
 use App\Http\Controllers\Company\AttendancePolicyController;
 use App\Http\Controllers\Company\AttendanceVerificationController;
@@ -19,8 +19,8 @@ use App\Http\Controllers\Company\OjtBulkImportController;
 use App\Http\Controllers\Company\OjtController;
 use App\Http\Controllers\Company\OjtProfileController;
 use App\Http\Controllers\Company\OperationsController;
-use App\Http\Controllers\Company\RecoveryCenterController;
 use App\Http\Controllers\Company\ReportApprovalInboxController;
+use App\Http\Controllers\Company\RecoveryCenterController;
 use App\Http\Controllers\Company\SchoolAccessController;
 use App\Http\Controllers\Company\SchoolCoordinatorController;
 use App\Http\Controllers\Company\SupervisorController;
@@ -103,7 +103,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/action-center', ActionCenterController::class)
         ->middleware(EnsurePasswordChanged::class)
-        ->name('actions.index');
+        ->name('action-center.index');
 
     Route::get('/supervisor/dashboard', [SupervisorDashboardController::class, 'index'])
         ->middleware(EnsurePasswordChanged::class)
