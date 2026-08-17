@@ -12,7 +12,7 @@ class CompanyPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->isCompanyAdmin();
+        return $user->isCompanyAdmin() || $user->isCompanyStaff() || $user->isPlatformAdmin();
     }
 
     /**
@@ -20,7 +20,9 @@ class CompanyPolicy
      */
     public function view(User $user, Company $company): bool
     {
-        return $user->isCompanyAdmin() && $user->company_id === $company->id;
+        return ($user->isCompanyAdmin() || $user->isCompanyStaff())
+            && $user->account_active
+            && $user->company_id === $company->id;
     }
 
     /**

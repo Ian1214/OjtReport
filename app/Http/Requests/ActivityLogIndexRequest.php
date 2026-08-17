@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\CompanyPermissions;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -12,7 +13,7 @@ class ActivityLogIndexRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->isCompanyAdmin() === true;
+        return $this->user()?->canCompany(CompanyPermissions::AUDIT_VIEW) === true;
     }
 
     /**

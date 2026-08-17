@@ -23,6 +23,7 @@ export function AppMobileNav() {
     const { primaryItems, moreSections } = roleNavigation(
         auth.user.role,
         navigation,
+        auth.user.company_permissions ?? [],
     );
     const moreItems = moreSections.flatMap((section) => section.items);
     const isMoreActive = moreItems.some((item) =>
@@ -160,11 +161,15 @@ function CountBadge({
 }
 
 function roleName(role: User['role']): string {
-    return role === 'company_admin'
-        ? 'Company administrator'
-        : role === 'supervisor'
-          ? 'Supervisor'
-          : role === 'school_coordinator'
-            ? 'School coordinator'
-            : 'OJT';
+    return role === 'platform_admin'
+        ? 'Platform administrator'
+        : role === 'company_admin'
+          ? 'Company administrator'
+          : role === 'company_staff'
+            ? 'Company team member'
+            : role === 'supervisor'
+              ? 'Supervisor'
+              : role === 'school_coordinator'
+                ? 'School coordinator'
+                : 'OJT';
 }

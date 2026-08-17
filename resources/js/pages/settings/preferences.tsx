@@ -133,6 +133,29 @@ export default function Preferences({ preferences, timezone, options }: Props) {
                                 description="Receive status changes for attendance correction requests."
                                 defaultChecked={preferences.attendance_updates}
                             />
+                            <PreferenceToggle
+                                name="email_workflow_updates"
+                                icon={BellRing}
+                                title="Immediate email updates"
+                                description="Also email report and attendance decisions as soon as they happen."
+                                defaultChecked={
+                                    preferences.email_workflow_updates
+                                }
+                            />
+                            <PreferenceToggle
+                                name="daily_digest"
+                                icon={CalendarDays}
+                                title="Daily email digest"
+                                description="Receive one morning summary when unread workflow notifications are waiting."
+                                defaultChecked={preferences.daily_digest}
+                            />
+                            <PreferenceToggle
+                                name="escalation_alerts"
+                                icon={ShieldCheck}
+                                title="Escalation reminders"
+                                description="Receive reminders for overdue reports, onboarding steps, and actions that risk delaying completion."
+                                defaultChecked={preferences.escalation_alerts}
+                            />
 
                             <div className="rounded-2xl border border-primary/15 bg-primary/6 p-4 text-sm leading-6 text-muted-foreground">
                                 Security, password, and account-access notices
@@ -213,6 +236,9 @@ function PreferenceToggle({
         | 'high_contrast'
         | 'report_updates'
         | 'attendance_updates'
+        | 'email_workflow_updates'
+        | 'daily_digest'
+        | 'escalation_alerts'
     >;
     icon: typeof Accessibility;
     title: string;

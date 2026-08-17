@@ -32,6 +32,9 @@ class PreferenceUpdateRequest extends FormRequest
             'high_contrast' => ['required', 'boolean'],
             'report_updates' => ['required', 'boolean'],
             'attendance_updates' => ['required', 'boolean'],
+            'email_workflow_updates' => ['required', 'boolean'],
+            'daily_digest' => ['required', 'boolean'],
+            'escalation_alerts' => ['required', 'boolean'],
         ];
     }
 
@@ -42,6 +45,9 @@ class PreferenceUpdateRequest extends FormRequest
             'high_contrast' => $this->boolean('high_contrast'),
             'report_updates' => $this->boolean('report_updates'),
             'attendance_updates' => $this->boolean('attendance_updates'),
+            'email_workflow_updates' => $this->boolean('email_workflow_updates'),
+            'daily_digest' => $this->boolean('daily_digest'),
+            'escalation_alerts' => $this->boolean('escalation_alerts'),
         ]);
     }
 }

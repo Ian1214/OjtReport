@@ -43,6 +43,9 @@ test('user can update workspace preferences', function () {
             'high_contrast' => true,
             'report_updates' => false,
             'attendance_updates' => true,
+            'email_workflow_updates' => true,
+            'daily_digest' => true,
+            'escalation_alerts' => false,
         ])
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('preferences.edit'));
@@ -57,6 +60,9 @@ test('user can update workspace preferences', function () {
             'high_contrast' => true,
             'report_updates' => false,
             'attendance_updates' => true,
+            'email_workflow_updates' => true,
+            'daily_digest' => true,
+            'escalation_alerts' => false,
         ]);
 });
 

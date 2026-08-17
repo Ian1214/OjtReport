@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Platform\DashboardController;
 use App\Models\AttendanceCorrectionRequest;
 use App\Models\Company;
 use App\Models\CompletionCertificate;
@@ -31,7 +32,11 @@ class CompanyDashboardController extends Controller
             return app(SchoolCoordinatorDashboardController::class)->index($request);
         }
 
-        if (! $user->isCompanyAdmin()) {
+        if ($user->isPlatformAdmin()) {
+            return app(DashboardController::class)->index($request);
+        }
+
+        if (! $user->isCompanyAdmin() && ! $user->isCompanyStaff()) {
             $user->loadMissing('assignedSupervisor');
 
             $activeReport = $user->dailyReports()

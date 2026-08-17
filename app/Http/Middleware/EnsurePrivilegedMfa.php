@@ -17,7 +17,7 @@ class EnsurePrivilegedMfa
 
         if (config('operations.security.require_privileged_mfa')
             && $user !== null
-            && ($user->isCompanyAdmin() || $user->isSupervisor())
+            && ($user->isPlatformAdmin() || $user->isCompanyAdmin() || $user->isCompanyStaff() || $user->isSupervisor())
             && $user->two_factor_confirmed_at === null
             && ! $user->passkeys()->exists()
             && ! $isExempt) {

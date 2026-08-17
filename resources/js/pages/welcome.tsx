@@ -18,6 +18,7 @@ import {
     Info,
     LayoutGrid,
     LogIn,
+    Menu,
     MessageCircle,
     QrCode,
     School,
@@ -30,6 +31,16 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import AppLogoIcon from '@/components/app-logo-icon';
+import {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from '@/components/ui/sheet';
 import { login, register, terms } from '@/routes';
 
 const platformCapabilities = [
@@ -235,15 +246,15 @@ export default function Welcome() {
                 <header
                     className={`fixed left-1/2 z-50 -translate-x-1/2 transition-[top,width,max-width] duration-500 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none ${
                         isNavigationCompact
-                            ? 'top-2 w-[calc(100%-1rem)] max-w-[30rem] sm:top-3'
-                            : 'top-3 w-[calc(100%-1.5rem)] max-w-7xl sm:top-6 sm:w-[95%]'
+                            ? 'top-2 w-[8.5rem] max-w-[30rem] sm:top-3 sm:w-[calc(100%-1rem)]'
+                            : 'top-2 w-[calc(100%-1rem)] max-w-7xl sm:top-6 sm:w-[95%]'
                     }`}
                 >
                     <div
                         className={`relative flex items-center justify-between gap-1.5 overflow-hidden border backdrop-blur-3xl backdrop-saturate-150 transition-[border-radius,padding,background-color,border-color,box-shadow] duration-500 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none ${
                             isNavigationCompact
                                 ? 'rounded-full border-white/20 bg-slate-950/35 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,.16),inset_0_-1px_0_rgba(34,211,238,.08),0_14px_45px_rgba(0,0,0,.28),0_0_28px_rgba(34,211,238,.08)]'
-                                : 'rounded-2xl border-white/10 bg-[#0b1220]/88 px-4 py-3 shadow-2xl shadow-black/20 sm:px-6 sm:py-4 lg:px-8'
+                                : 'rounded-2xl border-white/10 bg-[#0b1220]/88 px-3 py-2 shadow-2xl shadow-black/20 sm:px-6 sm:py-4 lg:px-8'
                         }`}
                     >
                         <div
@@ -273,10 +284,10 @@ export default function Welcome() {
                                 className={`grid shrink-0 place-items-center border border-cyan-300/15 bg-cyan-300/8 shadow-[0_0_24px_rgba(34,211,238,.12)] transition-[width,height,border-radius] duration-500 motion-reduce:transition-none ${
                                     isNavigationCompact
                                         ? 'size-10 rounded-full'
-                                        : 'size-10 rounded-xl'
+                                        : 'size-9 rounded-xl sm:size-10'
                                 }`}
                             >
-                                <AppLogoIcon className="size-7" />
+                                <AppLogoIcon className="size-6 sm:size-7" />
                             </span>
                             <div
                                 className={`min-w-0 overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-400 motion-reduce:transition-none ${
@@ -285,7 +296,7 @@ export default function Welcome() {
                                         : 'max-w-52 translate-x-0 opacity-100'
                                 }`}
                             >
-                                <h1 className="truncate text-sm font-bold tracking-[.16em] sm:text-base lg:text-lg">
+                                <h1 className="truncate text-xs font-bold tracking-[.13em] sm:text-base sm:tracking-[.16em] lg:text-lg">
                                     OJT REPORT
                                 </h1>
 
@@ -327,7 +338,8 @@ export default function Welcome() {
                             />
                         </nav>
 
-                        <div className="flex shrink-0 gap-2 sm:gap-3">
+                        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                            <MobileLandingNavigation />
                             <Link
                                 href={register()}
                                 aria-label="Register company"
@@ -354,7 +366,7 @@ export default function Welcome() {
                                 href={login()}
                                 aria-label="Sign in"
                                 title="Sign in"
-                                className={`group inline-flex shrink-0 items-center justify-center border text-sm leading-none font-semibold backdrop-blur-xl transition-[width,height,padding,gap,border-radius,background-color,border-color] duration-500 ease-[cubic-bezier(.22,1,.36,1)] hover:border-cyan-300/30 hover:bg-cyan-300/12 motion-reduce:transition-none ${
+                                className={`group hidden shrink-0 items-center justify-center border text-sm leading-none font-semibold backdrop-blur-xl transition-[width,height,padding,gap,border-radius,background-color,border-color] duration-500 ease-[cubic-bezier(.22,1,.36,1)] hover:border-cyan-300/30 hover:bg-cyan-300/12 motion-reduce:transition-none sm:inline-flex ${
                                     isNavigationCompact
                                         ? 'aspect-square size-10 gap-0 rounded-full border-cyan-300/15 bg-cyan-300/8 p-0'
                                         : 'h-11 w-24 gap-2 rounded-xl border-white/12 bg-white/6 px-4 sm:w-28 sm:px-5'
@@ -964,5 +976,86 @@ function LandingNavLink({
                 {label}
             </span>
         </a>
+    );
+}
+
+function MobileLandingNavigation() {
+    const navigation = [
+        { href: '#home', label: 'Home', icon: Home },
+        { href: '#features', label: 'Features', icon: LayoutGrid },
+        { href: '#partners', label: 'Workspaces', icon: Building2 },
+        { href: '#about', label: 'About', icon: Info },
+    ];
+
+    return (
+        <Sheet>
+            <SheetTrigger asChild>
+                <button
+                    type="button"
+                    aria-label="Open navigation menu"
+                    className="grid size-10 shrink-0 place-items-center rounded-full border border-cyan-300/15 bg-cyan-300/8 text-white transition outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 active:scale-95 sm:hidden"
+                >
+                    <Menu className="size-5" />
+                </button>
+            </SheetTrigger>
+            <SheetContent
+                side="right"
+                className="w-[min(88vw,22rem)] border-white/10 bg-[#07101d]/98 text-white shadow-2xl backdrop-blur-2xl"
+            >
+                <SheetHeader className="border-b border-white/10 px-5 pt-6 pb-5 text-left">
+                    <div className="flex items-center gap-3">
+                        <span className="grid size-10 place-items-center rounded-xl border border-cyan-300/15 bg-cyan-300/8">
+                            <AppLogoIcon className="size-7" />
+                        </span>
+                        <div>
+                            <SheetTitle className="text-white">
+                                OJT Report
+                            </SheetTitle>
+                            <SheetDescription className="text-xs text-slate-400">
+                                Internship operations hub
+                            </SheetDescription>
+                        </div>
+                    </div>
+                </SheetHeader>
+
+                <nav
+                    aria-label="Mobile landing page navigation"
+                    className="grid gap-2 px-4 py-3"
+                >
+                    {navigation.map(({ href, label, icon: Icon }) => (
+                        <SheetClose asChild key={href}>
+                            <a
+                                href={href}
+                                className="flex min-h-12 items-center gap-3 rounded-xl border border-transparent px-3 text-sm font-medium text-slate-200 transition outline-none focus-visible:border-cyan-300/30 focus-visible:bg-cyan-300/10 active:bg-cyan-300/10"
+                            >
+                                <span className="grid size-9 place-items-center rounded-lg bg-white/5 text-cyan-300">
+                                    <Icon className="size-4" />
+                                </span>
+                                {label}
+                            </a>
+                        </SheetClose>
+                    ))}
+                </nav>
+
+                <SheetFooter className="border-t border-white/10 p-4">
+                    <SheetClose asChild>
+                        <Link
+                            href={register()}
+                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-emerald-400 px-4 text-sm font-semibold text-slate-950"
+                        >
+                            <UserPlus className="size-4" /> Register company
+                        </Link>
+                    </SheetClose>
+                    <SheetClose asChild>
+                        <Link
+                            href={login()}
+                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/6 px-4 text-sm font-semibold text-white"
+                        >
+                            <LogIn className="size-4" /> Sign in
+                        </Link>
+                    </SheetClose>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
     );
 }

@@ -6,6 +6,7 @@ use App\Http\Requests\ReviewDocumentRequest;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Models\Document;
 use App\Models\User;
+use App\Support\CompanyPermissions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -77,9 +78,9 @@ class DocumentController extends Controller
 
         return Inertia::render('documents/index', [
             'canUpload' => in_array($viewer->role, ['company_admin', 'ojt'], true),
-            'canReview' => $viewer->isCompanyAdmin(),
+            'canReview' => $viewer->canCompany(CompanyPermissions::DOCUMENTS_REVIEW),
             'isOjt' => $viewer->role === 'ojt',
-            'ojts' => $viewer->isCompanyAdmin()
+            'ojts' => $viewer->canCompany(CompanyPermissions::DOCUMENTS_REVIEW)
                 ? User::query()->where('company_id', $viewer->company_id)->where('role', 'ojt')
                     ->orderBy('name')->get(['id', 'name', 'student_id'])
                 : [],
@@ -118,7 +119,7 @@ class DocumentController extends Controller
      */
     private function accessibleStudentFolderQuery(User $viewer): ?Builder
     {
-        if ($viewer->isCompanyAdmin()) {
+        if ($viewer->canCompany(CompanyPermissions::DOCUMENTS_REVIEW)) {
             return User::query()
                 ->where('role', 'ojt')
                 ->where('company_id', $viewer->company_id);
@@ -204,10 +205,13 @@ class DocumentController extends Controller
     public function destroy(Document $document): RedirectResponse
     {
         Gate::authorize('delete', $document);
-        Storage::disk($document->disk)->delete($document->path);
+        $document->update([
+            'deletion_reason' => 'Removed from the document vault.',
+            'deleted_by' => request()->user()?->id,
+        ]);
         $document->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Document deleted.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Document moved to the recovery center.']);
 
         return to_route('documents.index');
     }

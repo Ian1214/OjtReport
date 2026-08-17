@@ -6,11 +6,12 @@ use Database\Factories\DocumentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Document extends Model
 {
     /** @use HasFactory<DocumentFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public const CATEGORY_MOA = 'moa';
 
@@ -53,6 +54,8 @@ class Document extends Model
         'reviewed_by',
         'reviewed_at',
         'rejection_reason',
+        'deletion_reason',
+        'deleted_by',
     ];
 
     protected function casts(): array

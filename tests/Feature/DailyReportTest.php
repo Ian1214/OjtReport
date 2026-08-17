@@ -346,7 +346,7 @@ test('an OJT can delete a rejected report', function () {
     $response = $this->actingAs($user)->delete(route('reports.destroy', $report));
 
     $response->assertRedirect(route('reports.index', absolute: false));
-    $this->assertModelMissing($report);
+    $this->assertSoftDeleted($report);
 });
 
 test('an OJT cannot edit or delete a pending or approved report', function (string $status) {

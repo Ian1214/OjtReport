@@ -237,7 +237,7 @@ test('an OJT can delete an unfinalized DTR period without deleting its daily rep
         ->delete(route('dtr-submissions.destroy', $submission))
         ->assertRedirect();
 
-    $this->assertModelMissing($submission);
+    $this->assertSoftDeleted($submission);
     expect($report->refresh()->dtr_submission_id)->toBeNull()
         ->and($ojt->dailyReports()->whereKey($report)->exists())->toBeTrue();
 });
@@ -285,7 +285,7 @@ test('a company administrator can delete their finalized DTR sign-off without de
         ->assertRedirect()
         ->assertInertiaFlash('toast.type', 'success');
 
-    $this->assertModelMissing($submission);
+    $this->assertSoftDeleted($submission);
     expect($report->refresh()->dtr_submission_id)->toBeNull()
         ->and($ojt->dailyReports()->whereKey($report)->exists())->toBeTrue();
 

@@ -9,6 +9,7 @@ use App\Models\CompletionCertificate;
 use App\Models\DailyReport;
 use App\Models\LeaveRequest;
 use App\Models\User;
+use App\Support\CompanyPermissions;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,7 +21,7 @@ class OjtAnalyticsController extends Controller
     {
         /** @var User $administrator */
         $administrator = $request->user();
-        abort_unless($administrator->isCompanyAdmin(), 403);
+        abort_unless($administrator->canCompany(CompanyPermissions::ANALYTICS_VIEW), 403);
 
         $company = Company::query()->with('holidays')->findOrFail($administrator->company_id);
         $ojtIds = User::query()

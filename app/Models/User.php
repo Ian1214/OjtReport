@@ -23,6 +23,9 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property int|null $school_id
  * @property int|null $supervisor_id
  * @property string $role
+ * @property list<string>|null $company_permissions
+ * @property bool $account_active
+ * @property Carbon|null $suspended_at
  * @property bool $must_change_password
  * @property string $name
  * @property string|null $student_id
@@ -57,6 +60,10 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'school_id',
     'supervisor_id',
     'role',
+    'company_permissions',
+    'account_active',
+    'suspended_at',
+    'suspended_by',
     'must_change_password',
     'student_id',
     'program',
@@ -90,6 +97,7 @@ class User extends Authenticatable implements PasskeyUser
     protected $attributes = [
         'timezone' => 'Asia/Manila',
         'ojt_status' => 'active',
+        'account_active' => true,
     ];
 
     public const OJT_STATUS_ONBOARDING = 'onboarding';
@@ -142,6 +150,9 @@ class User extends Authenticatable implements PasskeyUser
         'high_contrast' => false,
         'report_updates' => true,
         'attendance_updates' => true,
+        'email_workflow_updates' => false,
+        'daily_digest' => false,
+        'escalation_alerts' => true,
     ];
 
     protected function casts(): array
@@ -152,6 +163,9 @@ class User extends Authenticatable implements PasskeyUser
             'last_seen_at' => 'datetime',
             'password' => 'hashed',
             'must_change_password' => 'boolean',
+            'company_permissions' => 'array',
+            'account_active' => 'boolean',
+            'suspended_at' => 'datetime',
             'start_date' => 'date',
             'end_date' => 'date',
             'school_acknowledged_at' => 'datetime',
@@ -321,6 +335,27 @@ class User extends Authenticatable implements PasskeyUser
     public function isCompanyAdmin(): bool
     {
         return $this->role === 'company_admin';
+    }
+
+    public function isCompanyStaff(): bool
+    {
+        return $this->role === 'company_staff';
+    }
+
+    public function isPlatformAdmin(): bool
+    {
+        return $this->role === 'platform_admin';
+    }
+
+    public function canCompany(string $permission): bool
+    {
+        if ($this->isCompanyAdmin() || $this->isPlatformAdmin()) {
+            return true;
+        }
+
+        return $this->isCompanyStaff()
+            && $this->account_active
+            && in_array($permission, $this->company_permissions ?? [], true);
     }
 
     public function isSupervisor(): bool

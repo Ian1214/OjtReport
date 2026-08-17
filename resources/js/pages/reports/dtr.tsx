@@ -37,6 +37,9 @@ type Props = {
         supervisorSignatureStrokes: SignatureValue | null;
         supervisorSignedAt: string;
         verifiedAt: string | null;
+        verificationUrl: string | null;
+        verificationQr: string | null;
+        verificationHash: string | null;
     } | null;
 };
 
@@ -233,10 +236,28 @@ export default function Dtr({
                     </div>
 
                     {submission?.verifiedAt && (
-                        <div className="mt-10 flex items-center justify-center gap-2 border-t pt-4 text-xs text-muted-foreground">
-                            <ShieldCheck className="size-4" />
-                            Company verified{' '}
-                            {formatDateTime(submission.verifiedAt)}
+                        <div className="mt-10 grid gap-4 border-t pt-4 text-xs text-muted-foreground sm:grid-cols-[1fr_auto] sm:items-center">
+                            <div className="flex items-start gap-2">
+                                <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+                                <div>
+                                    <p>
+                                        Company verified{' '}
+                                        {formatDateTime(submission.verifiedAt)}
+                                    </p>
+                                    {submission.verificationHash && (
+                                        <p className="mt-1 font-mono text-[10px] break-all">
+                                            {submission.verificationHash}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            {submission.verificationQr && (
+                                <img
+                                    src={submission.verificationQr}
+                                    alt="QR code to verify this DTR"
+                                    className="size-24 rounded-lg bg-white p-1"
+                                />
+                            )}
                         </div>
                     )}
                 </div>

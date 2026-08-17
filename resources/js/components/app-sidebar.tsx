@@ -20,7 +20,11 @@ export function AppSidebar() {
         navigation: NavigationCounts;
     }>().props;
     usePoll(15_000, { only: ['navigation'] }, { mode: 'rest' });
-    const { sections } = roleNavigation(auth.user.role, navigation);
+    const { sections } = roleNavigation(
+        auth.user.role,
+        navigation,
+        auth.user.company_permissions ?? [],
+    );
 
     return (
         <Sidebar
@@ -64,14 +68,14 @@ export function AppSidebar() {
     );
 }
 
-function workspaceLabel(
-    role: 'company_admin' | 'supervisor' | 'ojt' | 'school_coordinator',
-): string {
-    return role === 'company_admin'
-        ? 'Company workspace'
-        : role === 'supervisor'
-          ? 'Supervisor workspace'
-          : role === 'school_coordinator'
-            ? 'School workspace'
-            : 'OJT workspace';
+function workspaceLabel(role: Parameters<typeof roleNavigation>[0]): string {
+    return role === 'platform_admin'
+        ? 'Platform workspace'
+        : role === 'company_admin' || role === 'company_staff'
+          ? 'Company workspace'
+          : role === 'supervisor'
+            ? 'Supervisor workspace'
+            : role === 'school_coordinator'
+              ? 'School workspace'
+              : 'OJT workspace';
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SystemBackup;
 use App\Models\User;
 use App\Services\SystemHealthService;
+use App\Support\CompanyPermissions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -18,7 +19,7 @@ class OperationsController extends Controller
     {
         /** @var User $admin */
         $admin = $request->user();
-        abort_unless($admin->isCompanyAdmin(), 403);
+        abort_unless($admin->canCompany(CompanyPermissions::OPERATIONS_MANAGE), 403);
 
         return Inertia::render('company/operations', [
             'health' => $health->snapshot(),
@@ -49,7 +50,7 @@ class OperationsController extends Controller
 
     public function backup(Request $request): RedirectResponse
     {
-        abort_unless($request->user()?->isCompanyAdmin(), 403);
+        abort_unless($request->user()?->canCompany(CompanyPermissions::OPERATIONS_MANAGE), 403);
         $exitCode = Artisan::call('system:backup');
         Inertia::flash('toast', [
             'type' => $exitCode === 0 ? 'success' : 'error',
@@ -61,7 +62,7 @@ class OperationsController extends Controller
 
     public function verify(Request $request, SystemBackup $systemBackup): RedirectResponse
     {
-        abort_unless($request->user()?->isCompanyAdmin(), 403);
+        abort_unless($request->user()?->canCompany(CompanyPermissions::OPERATIONS_MANAGE), 403);
         $exitCode = Artisan::call('system:backup-verify', ['backup' => $systemBackup->id]);
         Inertia::flash('toast', [
             'type' => $exitCode === 0 ? 'success' : 'error',

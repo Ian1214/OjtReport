@@ -154,11 +154,15 @@ class PerformanceEvaluationController extends Controller
             ],
         );
 
+        $performanceEvaluation->update([
+            'deletion_reason' => 'Removed by a company administrator.',
+            'deleted_by' => $administrator->id,
+        ]);
         $performanceEvaluation->delete();
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => "The performance evaluation for {$ojtName} was deleted.",
+            'message' => "The performance evaluation for {$ojtName} was moved to the recovery center.",
         ]);
 
         return to_route('evaluations.index');

@@ -167,7 +167,7 @@ test('a company administrator can delete an evaluation from their company', func
         ->delete(route('evaluations.destroy', $evaluation))
         ->assertRedirect(route('evaluations.index'));
 
-    $this->assertModelMissing($evaluation);
+    $this->assertSoftDeleted($evaluation);
     expect(ActivityLog::query()->where('event', 'evaluation.deleted')->exists())->toBeTrue();
 });
 

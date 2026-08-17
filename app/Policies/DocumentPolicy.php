@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Document;
 use App\Models\User;
+use App\Support\CompanyPermissions;
 
 class DocumentPolicy
 {
@@ -12,7 +13,7 @@ class DocumentPolicy
      */
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['company_admin', 'supervisor', 'ojt', 'school_coordinator'], true);
+        return in_array($user->role, ['company_admin', 'company_staff', 'supervisor', 'ojt', 'school_coordinator'], true);
     }
 
     /**
@@ -53,7 +54,8 @@ class DocumentPolicy
      */
     public function update(User $user, Document $document): bool
     {
-        return $user->isCompanyAdmin() && $document->company_id === $user->company_id;
+        return $user->canCompany(CompanyPermissions::DOCUMENTS_REVIEW)
+            && $document->company_id === $user->company_id;
     }
 
     /**

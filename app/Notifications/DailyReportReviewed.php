@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class DailyReportReviewed extends Notification implements ShouldQueue
@@ -40,7 +41,19 @@ class DailyReportReviewed extends Notification implements ShouldQueue
             return [];
         }
 
-        return ['database'];
+        return $notifiable instanceof User && $notifiable->wantsNotification('email_workflow_updates')
+            ? ['database', 'mail']
+            : ['database'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        return (new MailMessage)
+            ->subject("Daily report {$this->status}")
+            ->greeting("Hello {$notifiable->name},")
+            ->line("Your daily report for {$this->reportDate} was {$this->status} by {$this->reviewerName}.")
+            ->when($this->rejectionReason !== null, fn (MailMessage $mail): MailMessage => $mail->line("Feedback: {$this->rejectionReason}"))
+            ->action('Open daily reports', route('reports.index'));
     }
 
     /**

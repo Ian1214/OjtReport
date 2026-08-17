@@ -6,11 +6,12 @@ use Database\Factories\PerformanceEvaluationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PerformanceEvaluation extends Model
 {
     /** @use HasFactory<PerformanceEvaluationFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public const STATUS_DRAFT = 'draft';
 
@@ -21,6 +22,7 @@ class PerformanceEvaluation extends Model
         'technical_score', 'work_quality_score', 'communication_score',
         'professionalism_score', 'attendance_score', 'strengths',
         'improvements', 'comments', 'status', 'submitted_at',
+        'deletion_reason', 'deleted_by',
     ];
 
     protected function casts(): array

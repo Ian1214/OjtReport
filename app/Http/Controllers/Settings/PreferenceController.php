@@ -38,6 +38,9 @@ class PreferenceController extends Controller
                 'high_contrast' => $validated['high_contrast'],
                 'report_updates' => $validated['report_updates'],
                 'attendance_updates' => $validated['attendance_updates'],
+                'email_workflow_updates' => $validated['email_workflow_updates'],
+                'daily_digest' => $validated['daily_digest'],
+                'escalation_alerts' => $validated['escalation_alerts'],
             ],
         ]);
 

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Document;
+use App\Support\CompanyPermissions;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -14,7 +15,7 @@ class ReviewDocumentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->isCompanyAdmin() === true;
+        return $this->user()?->canCompany(CompanyPermissions::DOCUMENTS_REVIEW) === true;
     }
 
     /**

@@ -4,6 +4,7 @@ use App\Http\Controllers\AttendanceCalendarController;
 use App\Http\Controllers\AttendanceCorrectionController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CertificateVerificationController;
+use App\Http\Controllers\Company\ActionCenterController;
 use App\Http\Controllers\Company\ActivityLogController;
 use App\Http\Controllers\Company\AttendanceMonitorController;
 use App\Http\Controllers\Company\AttendancePolicyController;
@@ -18,10 +19,12 @@ use App\Http\Controllers\Company\OjtBulkImportController;
 use App\Http\Controllers\Company\OjtController;
 use App\Http\Controllers\Company\OjtProfileController;
 use App\Http\Controllers\Company\OperationsController;
+use App\Http\Controllers\Company\RecoveryCenterController;
 use App\Http\Controllers\Company\ReportApprovalInboxController;
 use App\Http\Controllers\Company\SchoolAccessController;
 use App\Http\Controllers\Company\SchoolCoordinatorController;
 use App\Http\Controllers\Company\SupervisorController;
+use App\Http\Controllers\Company\TeamMemberController;
 use App\Http\Controllers\CompanyDashboardController;
 use App\Http\Controllers\CompetencyPassportController;
 use App\Http\Controllers\CompletionCertificateController;
@@ -30,13 +33,16 @@ use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DirectMessageController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DtrSubmissionController;
+use App\Http\Controllers\DtrVerificationController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OjtTaskController;
 use App\Http\Controllers\OjtTermsController;
 use App\Http\Controllers\OnboardingChecklistController;
 use App\Http\Controllers\PerformanceEvaluationController;
+use App\Http\Controllers\Platform\DashboardController as PlatformDashboardController;
 use App\Http\Controllers\PrivacyExportController;
+use App\Http\Controllers\PublicStatusController;
 use App\Http\Controllers\SchoolCoordinatorDashboardController;
 use App\Http\Controllers\SupervisorDashboardController;
 use App\Http\Controllers\SupervisorFeedbackController;
@@ -52,6 +58,12 @@ Route::get('/verify/certificates/{certificateNumber}', CertificateVerificationCo
 Route::get('/verify/passports/{token}', [CompetencyPassportController::class, 'verify'])
     ->middleware('throttle:60,1')
     ->name('passports.verify');
+Route::get('/verify/dtr/{token}', DtrVerificationController::class)
+    ->middleware('throttle:60,1')
+    ->name('dtr.verify');
+Route::get('/status', PublicStatusController::class)
+    ->middleware('throttle:30,1')
+    ->name('status');
 
 /*
 |--------------------------------------------------------------------------
@@ -84,6 +96,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [CompanyDashboardController::class, 'index'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('dashboard');
+
+    Route::get('/platform', [PlatformDashboardController::class, 'index'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('platform.dashboard');
+
+    Route::get('/action-center', ActionCenterController::class)
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('actions.index');
 
     Route::get('/supervisor/dashboard', [SupervisorDashboardController::class, 'index'])
         ->middleware(EnsurePasswordChanged::class)
@@ -325,6 +345,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(EnsurePasswordChanged::class)
         ->name('company.operations.index');
 
+    Route::get('company/recovery', [RecoveryCenterController::class, 'index'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('company.recovery.index');
+
+    Route::post('company/recovery/{recordType}/{recordId}/restore', [RecoveryCenterController::class, 'restore'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->whereNumber('recordId')
+        ->name('company.recovery.restore');
+
+    Route::delete('company/recovery/{recordType}/{recordId}', [RecoveryCenterController::class, 'destroy'])
+        ->middleware(['password.confirm', EnsurePasswordChanged::class])
+        ->whereNumber('recordId')
+        ->name('company.recovery.destroy');
+
     Route::get('company/analytics', OjtAnalyticsController::class)
         ->middleware(EnsurePasswordChanged::class)
         ->name('company.analytics.index');
@@ -432,6 +466,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('company/supervisors', [SupervisorController::class, 'store'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('company.supervisors.store');
+
+    Route::get('company/team', [TeamMemberController::class, 'index'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('company.team.index');
+
+    Route::post('company/team', [TeamMemberController::class, 'store'])
+        ->middleware(['throttle:10,1', EnsurePasswordChanged::class])
+        ->name('company.team.store');
+
+    Route::patch('company/team/{teamMember}', [TeamMemberController::class, 'update'])
+        ->middleware(['throttle:20,1', EnsurePasswordChanged::class])
+        ->name('company.team.update');
 
     Route::get('company/school-access', [SchoolAccessController::class, 'index'])
         ->middleware(EnsurePasswordChanged::class)

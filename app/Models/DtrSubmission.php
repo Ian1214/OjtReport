@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DtrSubmission extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public const STATUS_PENDING_SUPERVISOR = 'pending_supervisor';
 
@@ -25,6 +26,7 @@ class DtrSubmission extends Model
         'supervisor_reviewed_by', 'supervisor_reviewed_at', 'supervisor_signature_name',
         'supervisor_signature_strokes', 'supervisor_signed_at',
         'reviewed_by', 'reviewed_at', 'locked_at', 'rejection_reason', 'snapshot_hash',
+        'verification_token', 'deletion_reason', 'deleted_by',
     ];
 
     protected $hidden = [

@@ -19,12 +19,14 @@ import {
     MessageCircle,
     Palette,
     ServerCog,
+    ArchiveRestore,
     ShieldCheck,
     School,
     UserRound,
     UsersRound,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
+import { index as actionCenterIndex } from '@/routes/actions';
 import { edit as appearanceSettings } from '@/routes/appearance';
 import { index as attendanceCalendar } from '@/routes/attendance-calendar';
 import { index as attendanceCorrections } from '@/routes/attendance-corrections';
@@ -37,7 +39,9 @@ import { edit as attendancePolicy } from '@/routes/company/attendance-policy';
 import { index as departmentsIndex } from '@/routes/company/departments';
 import { index as managedOjtsIndex } from '@/routes/company/ojts';
 import { index as operationsIndex } from '@/routes/company/operations';
+import { index as recoveryIndex } from '@/routes/company/recovery';
 import { index as schoolAccessIndex } from '@/routes/company/school-access';
+import { index as teamIndex } from '@/routes/company/team';
 import { index as documentsIndex } from '@/routes/documents';
 import { index as dtrSubmissionsIndex } from '@/routes/dtr-submissions';
 import { index as evaluationsIndex } from '@/routes/evaluations';
@@ -45,6 +49,7 @@ import { index as leaveIndex } from '@/routes/leave';
 import { index as messagesIndex } from '@/routes/messages';
 import { index as notificationsIndex } from '@/routes/notifications';
 import { index as passportsIndex } from '@/routes/passports';
+import { dashboard as platformDashboard } from '@/routes/platform';
 import { edit as profileSettings } from '@/routes/profile';
 import { index as reportsIndex } from '@/routes/reports';
 import { dashboard as schoolDashboard } from '@/routes/school';
@@ -63,13 +68,22 @@ export type RoleNavigation = {
 export function roleNavigation(
     role: User['role'],
     counts: NavigationCounts,
+    permissions: string[] = [],
 ): RoleNavigation {
+    const can = (permission: string): boolean =>
+        role === 'company_admin' || permissions.includes(permission);
     const notifications: NavItem = {
         title: 'Notifications',
         mobileTitle: 'Alerts',
         href: notificationsIndex(),
         icon: Bell,
         badge: counts.unreadNotificationsCount,
+    };
+    const actionCenter: NavItem = {
+        title: 'Action Center',
+        mobileTitle: 'Actions',
+        href: actionCenterIndex(),
+        icon: ListChecks,
     };
     const corrections: NavItem = {
         title: 'Time Corrections',
@@ -120,7 +134,26 @@ export function roleNavigation(
         ],
     };
 
-    if (role === 'company_admin') {
+    if (role === 'platform_admin') {
+        const platform: NavItem = {
+            title: 'Platform Overview',
+            mobileTitle: 'Platform',
+            href: platformDashboard(),
+            icon: ShieldCheck,
+        };
+
+        return {
+            sections: [
+                { title: 'Platform', items: [platform] },
+                { title: 'Updates', items: [notifications] },
+                accountSection,
+            ],
+            primaryItems: [platform, notifications],
+            moreSections: [accountSection],
+        };
+    }
+
+    if (role === 'company_admin' || role === 'company_staff') {
         const dashboardItem: NavItem = {
             title: 'Dashboard',
             href: dashboard(),
@@ -169,134 +202,192 @@ export function roleNavigation(
                     title: 'Workspace',
                     items: [
                         dashboardItem,
-                        ojtAccounts,
-                        {
-                            title: 'Departments',
-                            href: departmentsIndex(),
-                            icon: Building2,
-                        },
-                        analytics,
+                        ...(can('people.manage')
+                            ? [
+                                  ojtAccounts,
+                                  {
+                                      title: 'Departments',
+                                      href: departmentsIndex(),
+                                      icon: Building2,
+                                  },
+                              ]
+                            : []),
+                        ...(can('analytics.view') ? [analytics] : []),
                     ],
                 },
                 {
                     title: 'Review & Approval',
                     items: [
-                        reviews,
-                        corrections,
-                        evaluations,
-                        passports,
-                        dtrSignOff,
-                        certificates,
-                        documents,
+                        ...(can('reports.review') ? [reviews] : []),
+                        ...(can('attendance.manage') ? [corrections] : []),
+                        ...(can('records.sign_off')
+                            ? [evaluations, passports, dtrSignOff, certificates]
+                            : []),
+                        ...(can('documents.review') ? [documents] : []),
                     ],
                 },
                 {
                     title: 'Attendance',
-                    items: [
-                        attendanceMonitor,
-                        workCalendar,
-                        {
-                            title: 'Work Schedule',
-                            href: attendancePolicy(),
-                            icon: Clock8,
-                        },
-                        {
-                            title: 'Leave & Calendar',
-                            href: leaveIndex(),
-                            icon: CalendarDays,
-                        },
-                    ],
+                    items: can('attendance.manage')
+                        ? [
+                              attendanceMonitor,
+                              workCalendar,
+                              {
+                                  title: 'Work Schedule',
+                                  href: attendancePolicy(),
+                                  icon: Clock8,
+                              },
+                              {
+                                  title: 'Leave & Calendar',
+                                  href: leaveIndex(),
+                                  icon: CalendarDays,
+                              },
+                          ]
+                        : [],
                 },
                 {
                     title: 'Administration',
                     items: [
-                        {
-                            title: 'School Access',
-                            href: schoolAccessIndex(),
-                            icon: School,
-                        },
-                        {
-                            title: 'Audit Trail',
-                            href: activityLogs(),
-                            icon: History,
-                        },
-                        {
-                            title: 'System Operations',
-                            href: operationsIndex(),
-                            icon: ServerCog,
-                        },
+                        ...(can('people.manage')
+                            ? [
+                                  {
+                                      title: 'School Access',
+                                      href: schoolAccessIndex(),
+                                      icon: School,
+                                  },
+                                  {
+                                      title: 'Company Team',
+                                      mobileTitle: 'Team',
+                                      href: teamIndex(),
+                                      icon: UsersRound,
+                                  },
+                              ]
+                            : []),
+                        ...(can('audit.view')
+                            ? [
+                                  {
+                                      title: 'Audit Trail',
+                                      href: activityLogs(),
+                                      icon: History,
+                                  },
+                                  {
+                                      title: 'Recovery Center',
+                                      mobileTitle: 'Recovery',
+                                      href: recoveryIndex(),
+                                      icon: ArchiveRestore,
+                                  },
+                              ]
+                            : []),
+                        ...(can('operations.manage')
+                            ? [
+                                  {
+                                      title: 'System Operations',
+                                      href: operationsIndex(),
+                                      icon: ServerCog,
+                                  },
+                              ]
+                            : []),
                     ],
                 },
-                { title: 'Updates', items: [notifications] },
-            ],
+                { title: 'Updates', items: [actionCenter, notifications] },
+            ].filter((section) => section.items.length > 0),
             primaryItems: [
                 dashboardItem,
-                attendanceMonitor,
-                reviews,
+                ...(can('attendance.manage') ? [attendanceMonitor] : []),
+                ...(can('reports.review') ? [reviews] : []),
                 notifications,
-            ],
+            ].slice(0, 4),
             moreSections: [
                 {
                     title: 'Workspace',
                     items: [
-                        ojtAccounts,
-                        {
-                            title: 'Departments',
-                            href: departmentsIndex(),
-                            icon: Building2,
-                        },
-                        analytics,
+                        ...(can('people.manage')
+                            ? [
+                                  ojtAccounts,
+                                  {
+                                      title: 'Departments',
+                                      href: departmentsIndex(),
+                                      icon: Building2,
+                                  },
+                              ]
+                            : []),
+                        ...(can('analytics.view') ? [analytics] : []),
                     ],
                 },
                 {
                     title: 'Review & Approval',
                     items: [
-                        corrections,
-                        evaluations,
-                        passports,
-                        dtrSignOff,
-                        certificates,
-                        documents,
+                        ...(can('attendance.manage') ? [corrections] : []),
+                        ...(can('records.sign_off')
+                            ? [evaluations, passports, dtrSignOff, certificates]
+                            : []),
+                        ...(can('documents.review') ? [documents] : []),
                     ],
                 },
                 {
                     title: 'Attendance',
-                    items: [
-                        workCalendar,
-                        {
-                            title: 'Work Schedule',
-                            href: attendancePolicy(),
-                            icon: Clock8,
-                        },
-                        {
-                            title: 'Leave & Calendar',
-                            href: leaveIndex(),
-                            icon: CalendarDays,
-                        },
-                    ],
+                    items: can('attendance.manage')
+                        ? [
+                              workCalendar,
+                              {
+                                  title: 'Work Schedule',
+                                  href: attendancePolicy(),
+                                  icon: Clock8,
+                              },
+                              {
+                                  title: 'Leave & Calendar',
+                                  href: leaveIndex(),
+                                  icon: CalendarDays,
+                              },
+                          ]
+                        : [],
                 },
                 {
                     title: 'Administration',
                     items: [
-                        {
-                            title: 'School Access',
-                            href: schoolAccessIndex(),
-                            icon: School,
-                        },
-                        {
-                            title: 'Audit Trail',
-                            href: activityLogs(),
-                            icon: History,
-                        },
-                        {
-                            title: 'System Operations',
-                            href: operationsIndex(),
-                            icon: ServerCog,
-                        },
+                        ...(can('people.manage')
+                            ? [
+                                  {
+                                      title: 'School Access',
+                                      href: schoolAccessIndex(),
+                                      icon: School,
+                                  },
+                                  {
+                                      title: 'Company Team',
+                                      mobileTitle: 'Team',
+                                      href: teamIndex(),
+                                      icon: UsersRound,
+                                  },
+                              ]
+                            : []),
+                        ...(can('audit.view')
+                            ? [
+                                  {
+                                      title: 'Audit Trail',
+                                      href: activityLogs(),
+                                      icon: History,
+                                  },
+                                  {
+                                      title: 'Recovery Center',
+                                      mobileTitle: 'Recovery',
+                                      href: recoveryIndex(),
+                                      icon: ArchiveRestore,
+                                  },
+                              ]
+                            : []),
+                        ...(can('operations.manage')
+                            ? [
+                                  {
+                                      title: 'System Operations',
+                                      href: operationsIndex(),
+                                      icon: ServerCog,
+                                  },
+                              ]
+                            : []),
                     ],
                 },
                 accountSection,
-            ],
+            ].filter((section) => section.items.length > 0),
         };
     }
 
@@ -332,7 +423,7 @@ export function roleNavigation(
                         certificates,
                     ],
                 },
-                { title: 'Updates', items: [notifications] },
+                { title: 'Updates', items: [actionCenter, notifications] },
             ],
             primaryItems: [myOjts, evaluations, messages, notifications],
             moreSections: [
@@ -447,7 +538,7 @@ export function roleNavigation(
                     { title: 'Leave', href: leaveIndex(), icon: CalendarDays },
                 ],
             },
-            { title: 'Updates', items: [notifications] },
+            { title: 'Updates', items: [actionCenter, notifications] },
         ],
         primaryItems: [dashboardItem, dailyReports, calendar, messages],
         moreSections: [
@@ -464,7 +555,7 @@ export function roleNavigation(
                     { title: 'Leave', href: leaveIndex(), icon: CalendarDays },
                 ],
             },
-            { title: 'Updates', items: [notifications] },
+            { title: 'Updates', items: [actionCenter, notifications] },
             accountSection,
         ],
     };

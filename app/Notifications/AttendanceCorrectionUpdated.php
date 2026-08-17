@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class AttendanceCorrectionUpdated extends Notification implements ShouldQueue
@@ -37,7 +38,19 @@ class AttendanceCorrectionUpdated extends Notification implements ShouldQueue
             return [];
         }
 
-        return ['database'];
+        return $notifiable instanceof User && $notifiable->wantsNotification('email_workflow_updates')
+            ? ['database', 'mail']
+            : ['database'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        return (new MailMessage)
+            ->subject($this->title)
+            ->greeting("Hello {$notifiable->name},")
+            ->line($this->message)
+            ->line("Attendance date: {$this->reportDate}")
+            ->action('Open time corrections', route('attendance-corrections.index'));
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Http\Requests\RejectDailyReportRequest;
 use App\Models\DailyReport;
 use App\Models\User;
 use App\Notifications\DailyReportReviewed;
+use App\Support\CompanyPermissions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -116,7 +117,7 @@ class DailyReportReviewController extends Controller
 
     private function authorizeCompanyReport(User $companyAdmin, DailyReport $dailyReport): void
     {
-        abort_unless($companyAdmin->isCompanyAdmin(), 403);
+        abort_unless($companyAdmin->canCompany(CompanyPermissions::REPORTS_REVIEW), 403);
 
         $dailyReport->loadMissing('user');
 

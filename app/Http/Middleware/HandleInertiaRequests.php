@@ -6,6 +6,7 @@ use App\Models\AttendanceCorrectionRequest;
 use App\Models\DailyReport;
 use App\Models\DirectMessage;
 use App\Models\User;
+use App\Support\CompanyPermissions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -50,7 +51,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user,
             ],
             'navigation' => [
-                'pendingReportsCount' => fn (): int => $user?->isCompanyAdmin() === true
+                'pendingReportsCount' => fn (): int => $user?->canCompany(CompanyPermissions::REPORTS_REVIEW) === true
                     ? DailyReport::query()
                         ->where('approval_status', DailyReport::STATUS_PENDING)
                         ->whereNotNull('summary')
@@ -77,12 +78,14 @@ class HandleInertiaRequests extends Middleware
                         ->where('status', AttendanceCorrectionRequest::STATUS_PENDING_SUPERVISOR)
                         ->whereHas('requester', fn (Builder $query): Builder => $query->where('supervisor_id', $user->id))
                         ->count(),
-                    'company_admin' => AttendanceCorrectionRequest::query()
-                        ->where('status', AttendanceCorrectionRequest::STATUS_PENDING_ADMIN)
-                        ->whereHas('requester', fn (Builder $query): Builder => $query
-                            ->where('company_id', $user->company_id)
-                            ->where('role', 'ojt'))
-                        ->count(),
+                    'company_admin', 'company_staff' => $user->canCompany(CompanyPermissions::ATTENDANCE_MANAGE)
+                        ? AttendanceCorrectionRequest::query()
+                            ->where('status', AttendanceCorrectionRequest::STATUS_PENDING_ADMIN)
+                            ->whereHas('requester', fn (Builder $query): Builder => $query
+                                ->where('company_id', $user->company_id)
+                                ->where('role', 'ojt'))
+                            ->count()
+                        : 0,
                     default => 0,
                 },
             ],

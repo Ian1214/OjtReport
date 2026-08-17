@@ -456,6 +456,10 @@ class DailyReportController extends Controller
         }
 
         DB::transaction(function () use ($dailyReport, $user): void {
+            $dailyReport->update([
+                'deletion_reason' => 'Rejected report removed by the OJT.',
+                'deleted_by' => $user->id,
+            ]);
             $dailyReport->delete();
             $user->syncCompletionFromApprovedReports();
         }, attempts: 3);

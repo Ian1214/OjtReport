@@ -3,7 +3,15 @@ export type User = {
     name: string;
     company_id: number | null;
     school_id: number | null;
-    role: 'company_admin' | 'supervisor' | 'ojt' | 'school_coordinator';
+    role:
+        | 'platform_admin'
+        | 'company_admin'
+        | 'company_staff'
+        | 'supervisor'
+        | 'ojt'
+        | 'school_coordinator';
+    company_permissions: string[] | null;
+    account_active: boolean;
     supervisor_id: number | null;
     must_change_password: boolean;
     student_id: string | null;
@@ -34,6 +42,9 @@ export type UserPreferences = {
     high_contrast: boolean;
     report_updates: boolean;
     attendance_updates: boolean;
+    email_workflow_updates: boolean;
+    daily_digest: boolean;
+    escalation_alerts: boolean;
 };
 
 export type Auth = {

@@ -11,11 +11,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DailyReport extends Model
 {
     /** @use HasFactory<DailyReportFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public const STATUS_APPROVED = 'approved';
 
@@ -47,6 +48,8 @@ class DailyReport extends Model
         'reviewed_at',
         'rejection_reason',
         'dtr_submission_id',
+        'deletion_reason',
+        'deleted_by',
     ];
 
     protected function casts(): array

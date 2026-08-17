@@ -9,13 +9,15 @@ use App\Models\DailyReport;
 use App\Models\DtrSubmission;
 use App\Models\User;
 use App\Rules\SignatureStrokes;
+use App\Services\DtrIntegrityService;
+use App\Support\CertificateQrCode;
+use App\Support\CompanyPermissions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -102,7 +104,7 @@ class DtrSubmissionController extends Controller
         return back();
     }
 
-    public function review(ReviewDtrSubmissionRequest $request, DtrSubmission $dtrSubmission, RecordActivity $recordActivity): RedirectResponse
+    public function review(ReviewDtrSubmissionRequest $request, DtrSubmission $dtrSubmission, RecordActivity $recordActivity, DtrIntegrityService $integrity): RedirectResponse
     {
         /** @var User $reviewer */
         $reviewer = $request->user();
@@ -113,7 +115,7 @@ class DtrSubmissionController extends Controller
             ? SignatureStrokes::normalize($request->validated('signature_data'))
             : null;
 
-        $submission = DB::transaction(function () use ($request, $dtrSubmission, $reviewer, $approve, $signatureStrokes): DtrSubmission {
+        $submission = DB::transaction(function () use ($request, $dtrSubmission, $reviewer, $approve, $signatureStrokes, $integrity): DtrSubmission {
             $locked = DtrSubmission::query()->with(['user', 'reports'])->lockForUpdate()->findOrFail($dtrSubmission->id);
 
             if ($reviewer->isSupervisor()) {
@@ -129,7 +131,7 @@ class DtrSubmissionController extends Controller
                     'rejection_reason' => $request->validated('rejection_reason'),
                 ]);
             } else {
-                abort_unless($reviewer->isCompanyAdmin(), 403);
+                abort_unless($reviewer->canCompany(CompanyPermissions::RECORDS_SIGN_OFF), 403);
                 $this->ensureStatus($locked, DtrSubmission::STATUS_PENDING_ADMIN);
                 $locked->update([
                     'status' => $approve ? DtrSubmission::STATUS_APPROVED : DtrSubmission::STATUS_REJECTED,
@@ -137,7 +139,8 @@ class DtrSubmissionController extends Controller
                     'reviewed_at' => now(),
                     'locked_at' => $approve ? now() : null,
                     'rejection_reason' => $request->validated('rejection_reason'),
-                    'snapshot_hash' => $approve ? $this->snapshotHash($locked) : null,
+                    'snapshot_hash' => $approve ? $integrity->hash($locked) : null,
+                    'verification_token' => $approve ? ($locked->verification_token ?? (string) str()->uuid()) : null,
                 ]);
             }
 
@@ -154,7 +157,7 @@ class DtrSubmissionController extends Controller
         return back();
     }
 
-    public function showPrintable(Request $request, DtrSubmission $dtrSubmission): Response
+    public function showPrintable(Request $request, DtrSubmission $dtrSubmission, CertificateQrCode $qrCode): Response
     {
         /** @var User $viewer */
         $viewer = $request->user();
@@ -166,7 +169,8 @@ class DtrSubmissionController extends Controller
         $canView = match ($viewer->role) {
             'ojt' => $dtrSubmission->user_id === $viewer->id,
             'supervisor' => $dtrSubmission->user->supervisor_id === $viewer->id,
-            'company_admin' => $dtrSubmission->company_id === $viewer->company_id,
+            'company_admin', 'company_staff' => $viewer->canCompany(CompanyPermissions::RECORDS_SIGN_OFF)
+                && $dtrSubmission->company_id === $viewer->company_id,
             'school_coordinator' => $viewer->school_id !== null
                 && $dtrSubmission->user->school_id === $viewer->school_id,
             default => false,
@@ -211,6 +215,9 @@ class DtrSubmissionController extends Controller
                 'supervisorSignatureStrokes' => $dtrSubmission->supervisor_signature_strokes,
                 'supervisorSignedAt' => $dtrSubmission->supervisor_signed_at->toIso8601String(),
                 'verifiedAt' => $dtrSubmission->reviewed_at?->toIso8601String(),
+                'verificationUrl' => $dtrSubmission->verification_token === null ? null : route('dtr.verify', $dtrSubmission->verification_token),
+                'verificationQr' => $dtrSubmission->verification_token === null ? null : $qrCode->dataUri(route('dtr.verify', $dtrSubmission->verification_token)),
+                'verificationHash' => $dtrSubmission->snapshot_hash,
             ],
         ]);
     }
@@ -245,11 +252,16 @@ class DtrSubmissionController extends Controller
                     'period_start' => $lockedSubmission->period_start->toDateString(),
                     'period_end' => $lockedSubmission->period_end->toDateString(),
                     'report_count' => $lockedSubmission->reports_count,
+                    'report_ids' => $lockedSubmission->reports()->pluck('id')->all(),
                     'status' => $lockedSubmission->status,
                 ],
             );
 
             $lockedSubmission->reports()->update(['dtr_submission_id' => null]);
+            $lockedSubmission->update([
+                'deletion_reason' => 'Unfinalized DTR period removed by the OJT.',
+                'deleted_by' => $ojt->id,
+            ]);
             $lockedSubmission->delete();
 
             return $periodLabel;
@@ -311,6 +323,10 @@ class DtrSubmissionController extends Controller
             );
 
             $lockedSubmission->reports()->update(['dtr_submission_id' => null]);
+            $lockedSubmission->update([
+                'deletion_reason' => 'Finalized DTR sign-off removed by the company administrator.',
+                'deleted_by' => $companyAdmin->id,
+            ]);
             $lockedSubmission->delete();
 
             return $periodLabel;
@@ -329,48 +345,5 @@ class DtrSubmissionController extends Controller
         if ($submission->status !== $status) {
             throw ValidationException::withMessages(['decision' => 'This DTR is no longer awaiting your review.']);
         }
-    }
-
-    private function snapshotHash(DtrSubmission $submission): string
-    {
-        $snapshot = $submission->reports->sortBy('id')->map(fn (DailyReport $report): array => [
-            $report->id, $report->report_date->toDateString(), $report->time_in, $report->time_out, $report->total_hours,
-        ])->values()->toJson();
-
-        return hash('sha256', Str::of($snapshot)->append(
-            '|',
-            (string) $submission->user_id,
-            '|',
-            $submission->period_start->toDateString(),
-            '|',
-            $submission->period_end->toDateString(),
-            '|',
-            (string) $submission->student_signature_name,
-            '|',
-            $this->signatureSnapshot($submission->student_signature_strokes),
-            '|',
-            (string) $submission->student_signed_at?->toIso8601String(),
-            '|',
-            (string) $submission->supervisor_signature_name,
-            '|',
-            $this->signatureSnapshot($submission->supervisor_signature_strokes),
-            '|',
-            (string) $submission->supervisor_signed_at?->toIso8601String(),
-        )->toString());
-    }
-
-    /**
-     * @param  array{version?: mixed, strokes?: mixed}|null  $signature
-     */
-    private function signatureSnapshot(?array $signature): string
-    {
-        if ($signature === null) {
-            return 'null';
-        }
-
-        return json_encode([
-            'version' => $signature['version'] ?? null,
-            'strokes' => $signature['strokes'] ?? null,
-        ], JSON_THROW_ON_ERROR);
     }
 }
