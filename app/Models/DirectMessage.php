@@ -17,6 +17,7 @@ class DirectMessage extends Model
         'recipient_id',
         'body',
         'image_path',
+        'image_size',
         'read_at',
         'edited_at',
     ];
@@ -26,6 +27,7 @@ class DirectMessage extends Model
         return [
             'read_at' => 'datetime',
             'edited_at' => 'datetime',
+            'image_size' => 'integer',
         ];
     }
 

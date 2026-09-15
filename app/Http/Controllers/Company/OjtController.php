@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Company;
 
+use App\Actions\EnsureCompanyUserCapacity;
 use App\Actions\RecordActivity;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCompanyOjtRequest;
@@ -20,8 +21,11 @@ use Inertia\Inertia;
 
 class OjtController extends Controller
 {
-    public function store(StoreCompanyOjtRequest $request, RecordActivity $recordActivity): RedirectResponse
-    {
+    public function store(
+        StoreCompanyOjtRequest $request,
+        RecordActivity $recordActivity,
+        EnsureCompanyUserCapacity $ensureCompanyUserCapacity,
+    ): RedirectResponse {
         /** @var User $companyAdmin */
         $companyAdmin = $request->user();
         $company = $companyAdmin->companyRecord;
@@ -32,7 +36,8 @@ class OjtController extends Controller
 
         $supervisor = $this->supervisorForCompany($company->id, $request->integer('supervisor_id'));
 
-        $ojt = DB::transaction(function () use ($company, $request, $initialPassword, $supervisor): User {
+        $ojt = DB::transaction(function () use ($company, $request, $initialPassword, $supervisor, $ensureCompanyUserCapacity): User {
+            $ensureCompanyUserCapacity->handle($company);
             $studentId = $this->nextStudentId();
             $department = Department::query()->firstOrCreate(
                 ['company_id' => $company->id, 'name' => $request->validated('department')],

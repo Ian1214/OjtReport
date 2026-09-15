@@ -327,7 +327,8 @@ export function PassportDetails({ passport }: { passport: Passport }) {
                                                     title={outcome.title}
                                                     className="rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-500"
                                                 >
-                                                    {outcome.code} · {outcome.title}
+                                                    {outcome.code} ·{' '}
+                                                    {outcome.title}
                                                 </span>
                                             ))}
                                         </div>

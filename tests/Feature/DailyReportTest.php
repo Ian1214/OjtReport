@@ -88,6 +88,39 @@ test('an OJT can submit a previous workday for company approval', function () {
             ->where('historicalEntry.enabled', true));
 });
 
+test('daily report history is paginated to keep the page payload small', function () {
+    $user = User::factory()->create();
+
+    foreach (range(1, 13) as $day) {
+        DailyReport::factory()->for($user)->create([
+            'report_date' => "2026-07-{$day}",
+            'summary' => "Completed OJT work for day {$day}.",
+        ]);
+    }
+
+    $this->actingAs($user)
+        ->get(route('reports.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->has('reports', 12)
+            ->where('reportPagination.currentPage', 1)
+            ->where('reportPagination.from', 1)
+            ->where('reportPagination.to', 12)
+            ->where('reportPagination.previousPageUrl', null)
+            ->where('reportPagination.nextPageUrl', fn ($url): bool => str_contains($url, 'page=2')));
+
+    $this->actingAs($user)
+        ->get(route('reports.index', ['page' => 2]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->has('reports', 1)
+            ->where('reportPagination.currentPage', 2)
+            ->where('reportPagination.from', 13)
+            ->where('reportPagination.to', 13)
+            ->where('reportPagination.nextPageUrl', null)
+            ->where('reportPagination.previousPageUrl', fn ($url): bool => str_contains($url, 'page=1')));
+});
+
 test('historical workdays must be within the OJT period and use an unused past date', function () {
     Carbon::setTestNow('2026-08-11 10:00:00');
     $company = Company::factory()->create();
@@ -264,6 +297,16 @@ test('daily report totals deduct lunch only for attendance that spans the full l
     'afternoon only' => ['13:00:00', '17:00:00', 4.0],
     'ends at six after lunch' => ['08:00:00', '18:00:00', 9.0],
 ]);
+
+test('daily report totals use the company configured break window and duration', function () {
+    expect(DailyReport::calculateTotalHours(
+        Carbon::createFromFormat('H:i:s', '08:00:00'),
+        Carbon::createFromFormat('H:i:s', '17:00:00'),
+        45,
+        '12:15',
+        '13:00',
+    ))->toBe(8.25);
+});
 
 test('an OJT cannot create a second report or time out another OJT report', function () {
     Carbon::setTestNow('2026-08-03 09:00:00');

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Settings\OrganizationSettingsController;
+use App\Http\Controllers\Settings\PlatformSettingsController;
 use App\Http\Controllers\Settings\PreferenceController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
@@ -32,6 +34,16 @@ Route::middleware(['auth', 'verified', EnsurePasswordChanged::class])->group(fun
         ->name('preferences.edit');
     Route::patch('settings/preferences', [PreferenceController::class, 'update'])
         ->name('preferences.update');
+
+    Route::get('settings/organization', [OrganizationSettingsController::class, 'edit'])
+        ->name('organization-settings.edit');
+    Route::post('settings/organization', [OrganizationSettingsController::class, 'update'])
+        ->name('organization-settings.update');
+
+    Route::get('settings/platform', [PlatformSettingsController::class, 'edit'])
+        ->name('platform-settings.edit');
+    Route::patch('settings/platform', [PlatformSettingsController::class, 'update'])
+        ->name('platform-settings.update');
 });
 
 Route::get('.well-known/passkey-endpoints', function () {

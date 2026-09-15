@@ -1,21 +1,25 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     Gauge,
     Palette,
     ShieldCheck,
     SlidersHorizontal,
     UserRound,
+    Building2,
+    ServerCog,
 } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { Button } from '@/components/ui/button';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+import { edit as organizationSettings } from '@/routes/organization-settings';
+import { edit as platformSettings } from '@/routes/platform-settings';
 import { edit as editPreferences } from '@/routes/preferences';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as settingsIndex } from '@/routes/settings';
-import type { NavItem } from '@/types';
+import type { Auth, NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
     {
@@ -47,6 +51,34 @@ const sidebarNavItems: NavItem[] = [
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
+    const { auth } = usePage<{ auth: Auth }>().props;
+    const roleItems: NavItem[] =
+        auth.user.role === 'platform_admin'
+            ? [
+                  {
+                      title: 'Platform policy',
+                      href: platformSettings(),
+                      icon: ServerCog,
+                  },
+              ]
+            : auth.user.role === 'company_admin' ||
+                auth.user.role === 'school_coordinator'
+              ? [
+                    {
+                        title:
+                            auth.user.role === 'company_admin'
+                                ? 'Company'
+                                : 'School',
+                        href: organizationSettings(),
+                        icon: Building2,
+                    },
+                ]
+              : [];
+    const navigationItems = [
+        sidebarNavItems[0],
+        ...roleItems,
+        ...sidebarNavItems.slice(1),
+    ];
 
     return (
         <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -78,7 +110,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                         className="command-panel grid grid-cols-2 gap-1 rounded-2xl border border-border/75 bg-card/80 p-2 backdrop-blur-sm sm:grid-cols-5 lg:sticky lg:top-20 lg:grid-cols-1"
                         aria-label="Settings"
                     >
-                        {sidebarNavItems.map((item, index) => (
+                        {navigationItems.map((item, index) => (
                             <Button
                                 key={`${toUrl(item.href)}-${index}`}
                                 size="sm"
@@ -104,7 +136,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                 </aside>
 
                 <div className="min-w-0">
-                    <section className="command-panel max-w-3xl space-y-10 rounded-2xl border border-border/75 bg-card/82 p-5 backdrop-blur-sm sm:p-7">
+                    <section className="command-panel max-w-5xl space-y-10 rounded-2xl border border-border/75 bg-card/82 p-5 backdrop-blur-sm sm:p-7">
                         {children}
                     </section>
                 </div>

@@ -27,7 +27,7 @@ export function NavMain({ sections = [] }: { sections: NavSection[] }) {
                                     asChild
                                     isActive={isCurrentOrParentUrl(item.href)}
                                     tooltip={{ children: item.title }}
-                                    className="relative h-10 rounded-xl border border-transparent px-3 text-[13px] font-medium text-sidebar-foreground/70 transition-all hover:border-sidebar-primary/10 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground data-[active=true]:border-sidebar-primary/20 data-[active=true]:bg-sidebar-accent data-[active=true]:font-semibold data-[active=true]:text-sidebar-accent-foreground data-[active=true]:shadow-[inset_3px_0_var(--sidebar-primary),0_8px_25px_-18px_var(--sidebar-primary)] motion-safe:hover:translate-x-0.5"
+                                    className="relative h-10 rounded-xl border border-transparent px-3 text-[13px] font-medium text-sidebar-foreground/70 transition-all duration-200 hover:border-sidebar-primary/12 hover:bg-sidebar-accent/65 hover:text-sidebar-accent-foreground data-[active=true]:border-luxury/15 data-[active=true]:bg-sidebar-accent data-[active=true]:font-semibold data-[active=true]:text-sidebar-accent-foreground data-[active=true]:shadow-[inset_2px_0_var(--luxury),0_10px_28px_-20px_var(--sidebar-primary)] motion-safe:hover:translate-x-0.5"
                                 >
                                     <Link href={item.href} prefetch>
                                         {item.icon && <item.icon />}

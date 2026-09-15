@@ -33,7 +33,7 @@ export function AppMobileNav() {
     return (
         <nav
             aria-label={`${roleName(auth.user.role)} mobile navigation`}
-            className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/15 bg-background/92 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-18px_55px_-30px_color-mix(in_oklab,var(--primary)_60%,transparent)] backdrop-blur-2xl before:absolute before:inset-x-1/4 before:top-0 before:h-px before:bg-linear-to-r before:from-transparent before:via-primary/70 before:to-transparent md:hidden"
+            className="fixed inset-x-0 bottom-0 z-40 border-t border-primary/12 bg-background/78 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-22px_65px_-38px_color-mix(in_oklab,var(--primary)_72%,transparent)] backdrop-blur-2xl before:absolute before:inset-x-1/4 before:top-0 before:h-px before:bg-linear-to-r before:from-transparent before:via-luxury/60 before:to-primary/45 md:hidden"
         >
             <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
                 {primaryItems.map((item) => {
@@ -45,7 +45,7 @@ export function AppMobileNav() {
                             href={item.href}
                             prefetch
                             aria-current={isActive ? 'page' : undefined}
-                            className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-medium transition-all ${isActive ? 'border-primary/20 bg-primary/10 text-primary shadow-[inset_0_1px_color-mix(in_oklab,var(--primary)_20%,transparent)]' : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                            className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-medium transition-all duration-200 motion-safe:active:scale-[0.97] ${isActive ? 'border-luxury/18 bg-primary/8 text-foreground shadow-[inset_0_2px_var(--luxury),0_10px_24px_-20px_color-mix(in_oklab,var(--primary)_75%,transparent)]' : 'border-transparent text-muted-foreground hover:bg-muted/65 hover:text-foreground'}`}
                         >
                             {item.icon && <item.icon className="size-5" />}
                             <span className="max-w-full truncate">
@@ -64,7 +64,7 @@ export function AppMobileNav() {
                             type="button"
                             aria-label="Open more options"
                             aria-current={isMoreActive ? 'page' : undefined}
-                            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-medium transition-colors ${isMoreActive ? 'border-primary/20 bg-primary/10 text-primary' : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-medium transition-all duration-200 motion-safe:active:scale-[0.97] ${isMoreActive ? 'border-luxury/18 bg-primary/8 text-foreground shadow-[inset_0_2px_var(--luxury)]' : 'border-transparent text-muted-foreground hover:bg-muted/65 hover:text-foreground'}`}
                         >
                             <MoreHorizontal className="size-5" />
                             <span>More</span>
@@ -72,7 +72,7 @@ export function AppMobileNav() {
                     </SheetTrigger>
                     <SheetContent
                         side="bottom"
-                        className="max-h-[82dvh] rounded-t-3xl border-primary/15 bg-background/97 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-28px_80px_-30px_color-mix(in_oklab,var(--primary)_45%,transparent)] backdrop-blur-2xl"
+                        className="max-h-[82dvh] rounded-t-[2rem] border-primary/12 bg-background/90 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-32px_90px_-34px_color-mix(in_oklab,var(--primary)_55%,transparent)] backdrop-blur-2xl"
                     >
                         <SheetHeader className="border-b px-5 pt-5 pb-4 text-left">
                             <div className="flex items-center gap-3">
@@ -125,7 +125,7 @@ function MobileSection({
                         <Link
                             href={item.href}
                             prefetch
-                            className={`flex min-h-14 items-center gap-3 rounded-2xl border px-4 text-sm font-medium transition-colors ${isCurrentOrParentUrl(item.href) ? 'border-primary/25 bg-primary/8 text-primary shadow-sm' : 'bg-card hover:bg-muted/60'}`}
+                            className={`flex min-h-14 items-center gap-3 rounded-2xl border px-4 text-sm font-medium transition-all duration-200 ${isCurrentOrParentUrl(item.href) ? 'border-luxury/20 bg-primary/8 text-foreground shadow-[inset_2px_0_var(--luxury)]' : 'border-border/60 bg-card/65 hover:border-primary/20 hover:bg-muted/60'}`}
                         >
                             {item.icon && <item.icon className="size-5" />}
                             <span className="flex-1">{item.title}</span>

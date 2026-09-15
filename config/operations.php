@@ -15,6 +15,6 @@ return [
         'automatic_pruning' => (bool) env('ARCHIVE_AUTOMATIC_PRUNING', false),
     ],
     'security' => [
-        'require_privileged_mfa' => (bool) env('REQUIRE_PRIVILEGED_MFA', false),
+        'require_privileged_mfa' => (bool) env('REQUIRE_PRIVILEGED_MFA', true),
     ],
 ];

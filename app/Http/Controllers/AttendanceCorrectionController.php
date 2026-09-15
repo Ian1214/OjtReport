@@ -230,6 +230,9 @@ class AttendanceCorrectionController extends Controller
                 'total_hours' => DailyReport::calculateTotalHours(
                     Carbon::createFromFormat('H:i:s', $timeIn),
                     Carbon::createFromFormat('H:i:s', $timeOut),
+                    (int) ($ojt->companyRecord?->resolvedSettings()['break_minutes'] ?? 60),
+                    (string) ($ojt->companyRecord?->resolvedSettings()['break_start_time'] ?? '12:00'),
+                    (string) ($ojt->companyRecord?->resolvedSettings()['break_end_time'] ?? '13:00'),
                 ),
             ]);
             $locked->update([

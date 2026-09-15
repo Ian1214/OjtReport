@@ -102,14 +102,21 @@ class DailyReport extends Model
         $query->where('approval_status', self::STATUS_APPROVED);
     }
 
-    public static function calculateTotalHours(Carbon $timeIn, Carbon $timeOut): float
-    {
+    public static function calculateTotalHours(
+        Carbon $timeIn,
+        Carbon $timeOut,
+        int $breakMinutes = 60,
+        string $breakStartTime = '12:00',
+        string $breakEndTime = '13:00',
+    ): float {
         $totalHours = $timeIn->diffInSeconds($timeOut) / 3600;
-        $lunchStart = $timeIn->copy()->setTime(12, 0);
-        $lunchEnd = $timeIn->copy()->setTime(13, 0);
+        [$breakStartHour, $breakStartMinute] = array_map('intval', explode(':', $breakStartTime));
+        [$breakEndHour, $breakEndMinute] = array_map('intval', explode(':', $breakEndTime));
+        $breakStart = $timeIn->copy()->setTime($breakStartHour, $breakStartMinute);
+        $breakEnd = $timeIn->copy()->setTime($breakEndHour, $breakEndMinute);
 
-        if ($timeIn->lessThan($lunchStart) && $timeOut->greaterThanOrEqualTo($lunchEnd)) {
-            $totalHours -= 1;
+        if ($breakMinutes > 0 && $timeIn->lessThan($breakStart) && $timeOut->greaterThanOrEqualTo($breakEnd)) {
+            $totalHours -= $breakMinutes / 60;
         }
 
         return round(max(0, $totalHours), 2);

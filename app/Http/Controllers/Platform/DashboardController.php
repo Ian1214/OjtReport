@@ -41,6 +41,7 @@ class DashboardController extends Controller
                 ->map(fn (Company $company): array => [
                     'id' => $company->id,
                     'name' => $company->name,
+                    'status' => $company->status,
                     'users' => $company->users_count,
                     'activeUsers' => $company->active_users_count,
                     'ojts' => $company->ojts_count,

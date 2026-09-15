@@ -12,7 +12,34 @@ class School extends Model
     /** @use HasFactory<SchoolFactory> */
     use HasFactory;
 
-    protected $fillable = ['name', 'contact_email'];
+    /** @var array<string, bool|string> */
+    public const DEFAULT_SETTINGS = [
+        'email_progress_alerts' => true,
+        'email_completion_alerts' => true,
+        'digest_frequency' => 'weekly',
+        'required_document_labels' => '',
+        'evaluation_template_name' => 'Standard OJT Evaluation',
+    ];
+
+    protected $fillable = [
+        'name',
+        'logo_path',
+        'address',
+        'contact_email',
+        'contact_phone',
+        'settings',
+    ];
+
+    protected function casts(): array
+    {
+        return ['settings' => 'array'];
+    }
+
+    /** @return array<string, mixed> */
+    public function resolvedSettings(): array
+    {
+        return array_replace(self::DEFAULT_SETTINGS, $this->settings ?? []);
+    }
 
     public function users(): HasMany
     {

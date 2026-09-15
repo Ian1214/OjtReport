@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 class SystemPreflight extends Command
 {
-    protected $signature = 'system:preflight';
+    protected $signature = 'system:preflight {--production : Include checks that must pass on a public production deployment}';
 
     protected $description = 'Check production-critical application configuration and services';
 
@@ -23,6 +23,24 @@ class SystemPreflight extends Command
             'Mail is not log-only' => config('mail.default') !== 'log',
             'Privileged MFA enforced' => (bool) config('operations.security.require_privileged_mfa'),
         ];
+
+        if ($this->option('production')) {
+            $applicationUrl = (string) config('app.url');
+            $applicationHost = (string) parse_url($applicationUrl, PHP_URL_HOST);
+            $isTemporaryTunnel = str_ends_with($applicationHost, '.trycloudflare.com')
+                || str_ends_with($applicationHost, '.ngrok-free.app')
+                || str_ends_with($applicationHost, '.ngrok.io');
+
+            $checks = [
+                'Production environment' => config('app.env') === 'production',
+                'Stable application hostname' => $applicationHost !== '' && ! $isTemporaryTunnel,
+                'Secure session cookies' => config('session.secure') === true,
+                'Persistent session store' => ! in_array(config('session.driver'), ['array', 'cookie'], true),
+                'Persistent cache store' => config('cache.default') !== 'array',
+                'Production log level' => config('logging.channels.single.level') !== 'debug',
+                ...$checks,
+            ];
+        }
 
         try {
             DB::select('select 1');

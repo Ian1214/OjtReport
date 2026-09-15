@@ -38,6 +38,12 @@ export type User = {
 export type UserPreferences = {
     date_format: 'month_first' | 'day_first' | 'iso';
     interface_density: 'comfortable' | 'compact';
+    time_format: 'twelve_hour' | 'twenty_four_hour';
+    week_starts_on: 'monday' | 'sunday';
+    font_size: 'standard' | 'large';
+    quiet_hours_enabled: boolean;
+    quiet_hours_start: string;
+    quiet_hours_end: string;
     reduce_motion: boolean;
     high_contrast: boolean;
     report_updates: boolean;

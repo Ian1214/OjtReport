@@ -17,6 +17,13 @@ declare module '@inertiajs/core' {
                 unreadNotificationsCount: number;
                 pendingCorrectionsCount: number;
             };
+            platformAnnouncement: {
+                id: number;
+                title: string;
+                message: string;
+                severity: 'info' | 'warning' | 'critical';
+                ends_at: string | null;
+            } | null;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

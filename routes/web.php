@@ -4,8 +4,8 @@ use App\Http\Controllers\AttendanceCalendarController;
 use App\Http\Controllers\AttendanceCorrectionController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CertificateVerificationController;
-use App\Http\Controllers\Company\ActivityLogController;
 use App\Http\Controllers\Company\ActionCenterController;
+use App\Http\Controllers\Company\ActivityLogController;
 use App\Http\Controllers\Company\AttendanceMonitorController;
 use App\Http\Controllers\Company\AttendancePolicyController;
 use App\Http\Controllers\Company\AttendanceVerificationController;
@@ -19,8 +19,8 @@ use App\Http\Controllers\Company\OjtBulkImportController;
 use App\Http\Controllers\Company\OjtController;
 use App\Http\Controllers\Company\OjtProfileController;
 use App\Http\Controllers\Company\OperationsController;
-use App\Http\Controllers\Company\ReportApprovalInboxController;
 use App\Http\Controllers\Company\RecoveryCenterController;
+use App\Http\Controllers\Company\ReportApprovalInboxController;
 use App\Http\Controllers\Company\SchoolAccessController;
 use App\Http\Controllers\Company\SchoolCoordinatorController;
 use App\Http\Controllers\Company\SupervisorController;
@@ -40,7 +40,11 @@ use App\Http\Controllers\OjtTaskController;
 use App\Http\Controllers\OjtTermsController;
 use App\Http\Controllers\OnboardingChecklistController;
 use App\Http\Controllers\PerformanceEvaluationController;
+use App\Http\Controllers\Platform\ActivityLogController as PlatformActivityLogController;
+use App\Http\Controllers\Platform\AnnouncementController as PlatformAnnouncementController;
 use App\Http\Controllers\Platform\DashboardController as PlatformDashboardController;
+use App\Http\Controllers\Platform\OperationsController as PlatformOperationsController;
+use App\Http\Controllers\Platform\TenantController as PlatformTenantController;
 use App\Http\Controllers\PrivacyExportController;
 use App\Http\Controllers\PublicStatusController;
 use App\Http\Controllers\SchoolCoordinatorDashboardController;
@@ -100,6 +104,46 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/platform', [PlatformDashboardController::class, 'index'])
         ->middleware(EnsurePasswordChanged::class)
         ->name('platform.dashboard');
+
+    Route::get('/platform/tenants', [PlatformTenantController::class, 'index'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('platform.tenants.index');
+
+    Route::patch('/platform/tenants/{company}', [PlatformTenantController::class, 'update'])
+        ->middleware(['password.confirm', 'throttle:20,1', EnsurePasswordChanged::class])
+        ->name('platform.tenants.update');
+
+    Route::get('/platform/operations', [PlatformOperationsController::class, 'index'])
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('platform.operations.index');
+
+    Route::post('/platform/operations/backups', [PlatformOperationsController::class, 'backup'])
+        ->middleware(['password.confirm', 'throttle:3,10', EnsurePasswordChanged::class])
+        ->name('platform.operations.backups.store');
+
+    Route::post('/platform/operations/backups/{systemBackup}/verify', [PlatformOperationsController::class, 'verify'])
+        ->middleware(['throttle:10,1', EnsurePasswordChanged::class])
+        ->name('platform.operations.backups.verify');
+
+    Route::post('/platform/operations/failed-jobs/{uuid}/retry', [PlatformOperationsController::class, 'retryFailedJob'])
+        ->middleware(['throttle:10,1', EnsurePasswordChanged::class])
+        ->name('platform.operations.failed-jobs.retry');
+
+    Route::delete('/platform/operations/failed-jobs/{uuid}', [PlatformOperationsController::class, 'forgetFailedJob'])
+        ->middleware(['password.confirm', 'throttle:10,1', EnsurePasswordChanged::class])
+        ->name('platform.operations.failed-jobs.destroy');
+
+    Route::post('/platform/announcements', [PlatformAnnouncementController::class, 'store'])
+        ->middleware(['throttle:10,1', EnsurePasswordChanged::class])
+        ->name('platform.announcements.store');
+
+    Route::delete('/platform/announcements/{platformAnnouncement}', [PlatformAnnouncementController::class, 'destroy'])
+        ->middleware(['password.confirm', 'throttle:10,1', EnsurePasswordChanged::class])
+        ->name('platform.announcements.destroy');
+
+    Route::get('/platform/activity-logs', PlatformActivityLogController::class)
+        ->middleware(EnsurePasswordChanged::class)
+        ->name('platform.activity-logs.index');
 
     Route::get('/action-center', ActionCenterController::class)
         ->middleware(EnsurePasswordChanged::class)

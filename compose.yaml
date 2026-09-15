@@ -1,5 +1,6 @@
 services:
     laravel.test:
+        working_dir: /var/www/html
         build:
             context: './vendor/laravel/sail/runtimes/8.5'
             dockerfile: Dockerfile
@@ -32,6 +33,7 @@ services:
             retries: 3
             start_period: 30s
     queue:
+        working_dir: /var/www/html
         build:
             context: './vendor/laravel/sail/runtimes/8.5'
             dockerfile: Dockerfile
@@ -52,6 +54,7 @@ services:
                 condition: service_healthy
         stop_grace_period: 30s
     scheduler:
+        working_dir: /var/www/html
         build:
             context: './vendor/laravel/sail/runtimes/8.5'
             dockerfile: Dockerfile

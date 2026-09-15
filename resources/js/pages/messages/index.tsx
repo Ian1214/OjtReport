@@ -73,7 +73,7 @@ export default function Messages({ contacts, participant, messages }: Props) {
 
     usePoll(
         10_000,
-        { only: ['messages', 'contacts', 'participant', 'navigation'] },
+        { only: ['messages', 'contacts', 'participant'] },
         { mode: 'rest' },
     );
 

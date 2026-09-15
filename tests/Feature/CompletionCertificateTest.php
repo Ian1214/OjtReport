@@ -61,6 +61,32 @@ test('an administrator can issue multiple partial certificates without exceeding
     expect(CompletionCertificate::query()->count())->toBe(2);
 });
 
+test('a certificate uses its company configured number prefix', function () {
+    $company = Company::factory()->create([
+        'settings' => [
+            ...Company::DEFAULT_SETTINGS,
+            'certificate_number_prefix' => 'OJTCERT',
+        ],
+    ]);
+    $administrator = User::factory()->create(['company_id' => $company->id, 'role' => 'company_admin']);
+    $supervisor = User::factory()->create(['company_id' => $company->id, 'role' => 'supervisor']);
+    $ojt = User::factory()->create(['company_id' => $company->id, 'supervisor_id' => $supervisor->id]);
+    DailyReport::factory()->for($ojt)->create([
+        'approval_status' => DailyReport::STATUS_APPROVED,
+        'total_hours' => 100,
+    ]);
+
+    $this->actingAs($administrator)->post(route('certificates.store'), [
+        'ojt_id' => $ojt->id,
+        'allocated_hours' => 100,
+        'signature' => $administrator->name,
+        'signature_data' => validCertificateSignature(),
+    ])->assertSessionHasNoErrors();
+
+    expect(CompletionCertificate::query()->sole()->certificate_number)
+        ->toStartWith('OJTCERT-'.now()->format('Y').'-');
+});
+
 test('only approved report hours can be allocated and an assigned supervisor is required', function () {
     $company = Company::factory()->create();
     $administrator = User::factory()->create(['company_id' => $company->id, 'role' => 'company_admin']);

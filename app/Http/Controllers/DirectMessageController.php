@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\EnsureCompanyStorageCapacity;
 use App\Http\Requests\StoreDirectMessageRequest;
 use App\Http\Requests\UpdateDirectMessageRequest;
 use App\Models\DirectMessage;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -85,23 +87,33 @@ class DirectMessageController extends Controller
         ]);
     }
 
-    public function store(StoreDirectMessageRequest $request, User $recipient): RedirectResponse
+    public function store(StoreDirectMessageRequest $request, User $recipient, EnsureCompanyStorageCapacity $capacity): RedirectResponse
     {
         /** @var User $sender */
         $sender = $request->user();
 
         abort_unless($this->canMessage($sender, $recipient), 404);
 
-        $imagePath = $request->file('image')?->store('chat-images', 'local');
+        $image = $request->file('image');
+        $company = $sender->companyRecord;
+        abort_unless($company !== null, 403);
 
-        abort_if($imagePath === false, 500, 'The image could not be stored.');
+        DB::transaction(function () use ($capacity, $company, $image, $recipient, $request, $sender): void {
+            if ($image !== null) {
+                $capacity->handle($company, (int) $image->getSize(), 'image');
+            }
 
-        DirectMessage::query()->create([
-            'sender_id' => $sender->id,
-            'recipient_id' => $recipient->id,
-            'body' => $request->string('body')->trim()->toString() ?: null,
-            'image_path' => $imagePath,
-        ]);
+            $imagePath = $image?->store('chat-images', 'local');
+            abort_if($imagePath === false, 500, 'The image could not be stored.');
+
+            DirectMessage::query()->create([
+                'sender_id' => $sender->id,
+                'recipient_id' => $recipient->id,
+                'body' => $request->string('body')->trim()->toString() ?: null,
+                'image_path' => $imagePath,
+                'image_size' => $image?->getSize(),
+            ]);
+        }, attempts: 3);
 
         return to_route('messages.show', $recipient);
     }

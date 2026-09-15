@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Company;
 
+use App\Actions\EnsureCompanyUserCapacity;
 use App\Actions\RecordActivity;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTeamMemberRequest;
@@ -51,16 +52,22 @@ class TeamMemberController extends Controller
         ]);
     }
 
-    public function store(StoreTeamMemberRequest $request, RecordActivity $recordActivity): RedirectResponse
-    {
+    public function store(
+        StoreTeamMemberRequest $request,
+        RecordActivity $recordActivity,
+        EnsureCompanyUserCapacity $ensureCompanyUserCapacity,
+    ): RedirectResponse {
         /** @var User $owner */
         $owner = $request->user();
         $validated = $request->validated();
+        $company = $owner->companyRecord;
+        abort_unless($company !== null, 403);
         $permissions = $validated['preset'] === 'custom'
             ? array_values(array_unique($validated['permissions'] ?? []))
             : CompanyPermissions::forPreset($validated['preset']);
 
-        $member = DB::transaction(function () use ($owner, $validated, $permissions): User {
+        $member = DB::transaction(function () use ($owner, $validated, $permissions, $company, $ensureCompanyUserCapacity): User {
+            $ensureCompanyUserCapacity->handle($company);
             $member = User::query()->create([
                 'company_id' => $owner->company_id,
                 'name' => $validated['name'],

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\EnsureCompanyStorageCapacity;
 use App\Http\Requests\ReviewDocumentRequest;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Models\Document;
@@ -10,6 +11,7 @@ use App\Support\CompanyPermissions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -134,30 +136,37 @@ class DocumentController extends Controller
         return null;
     }
 
-    public function store(StoreDocumentRequest $request): RedirectResponse
+    public function store(StoreDocumentRequest $request, EnsureCompanyStorageCapacity $capacity): RedirectResponse
     {
         /** @var User $uploader */
         $uploader = $request->user();
         Gate::authorize('create', Document::class);
         $file = $request->file('document');
-        $path = $file->store("documents/{$uploader->company_id}", 'local');
         $isOjtUpload = $uploader->role === 'ojt';
+        $company = $uploader->companyRecord;
+        abort_unless($company !== null, 403);
 
-        $uploader->uploadedDocuments()->create([
-            'company_id' => $uploader->company_id,
-            'ojt_id' => $isOjtUpload ? $uploader->id : $request->validated('ojt_id'),
-            'title' => $request->validated('title'),
-            'category' => $request->validated('category'),
-            'disk' => 'local',
-            'path' => $path,
-            'original_name' => $file->getClientOriginalName(),
-            'mime_type' => (string) $file->getMimeType(),
-            'size' => $file->getSize(),
-            'shared_with_school' => $isOjtUpload ? false : $request->boolean('shared_with_school'),
-            'status' => $isOjtUpload ? Document::STATUS_PENDING : Document::STATUS_APPROVED,
-            'reviewed_by' => $isOjtUpload ? null : $uploader->id,
-            'reviewed_at' => $isOjtUpload ? null : now(),
-        ]);
+        DB::transaction(function () use ($capacity, $company, $file, $isOjtUpload, $request, $uploader): void {
+            $capacity->handle($company, (int) $file->getSize(), 'document');
+            $path = $file->store("documents/{$uploader->company_id}", 'local');
+            abort_if($path === false, 500, 'The document could not be stored.');
+
+            $uploader->uploadedDocuments()->create([
+                'company_id' => $uploader->company_id,
+                'ojt_id' => $isOjtUpload ? $uploader->id : $request->validated('ojt_id'),
+                'title' => $request->validated('title'),
+                'category' => $request->validated('category'),
+                'disk' => 'local',
+                'path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => (string) $file->getMimeType(),
+                'size' => $file->getSize(),
+                'shared_with_school' => $isOjtUpload ? false : $request->boolean('shared_with_school'),
+                'status' => $isOjtUpload ? Document::STATUS_PENDING : Document::STATUS_APPROVED,
+                'reviewed_by' => $isOjtUpload ? null : $uploader->id,
+                'reviewed_at' => $isOjtUpload ? null : now(),
+            ]);
+        }, attempts: 3);
 
         Inertia::flash('toast', [
             'type' => 'success',

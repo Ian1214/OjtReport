@@ -33,6 +33,47 @@ class DailyReportController extends Controller
 
         Gate::authorize('viewAny', DailyReport::class);
         $attendanceSchedule = $this->attendanceSchedule($user);
+        $reports = $user->dailyReports()
+            ->with(['latestCorrectionRequest' => fn ($query) => $query->select([
+                'attendance_correction_requests.id',
+                'attendance_correction_requests.daily_report_id',
+                'attendance_correction_requests.status',
+            ])])
+            ->whereNotNull('summary')
+            ->latest('report_date')
+            ->simplePaginate(12, [
+                'id',
+                'report_date',
+                'time_in',
+                'time_out',
+                'total_hours',
+                'summary',
+                'approval_status',
+                'reviewed_at',
+                'rejection_reason',
+                'scheduled_time_in',
+                'scheduled_grace_minutes',
+                'attendance_status',
+                'late_minutes',
+                'created_at',
+            ])
+            ->withQueryString()
+            ->through(fn (DailyReport $report): array => [
+                'id' => $report->id,
+                'report_date' => $report->report_date->toDateString(),
+                'time_in' => $report->time_in,
+                'time_out' => $report->time_out,
+                'total_hours' => $report->total_hours,
+                'summary' => $report->summary,
+                'approval_status' => $report->approval_status,
+                'reviewed_at' => $report->reviewed_at?->toIso8601String(),
+                'rejection_reason' => $report->rejection_reason,
+                'latest_correction_status' => $report->latestCorrectionRequest?->status,
+                'scheduled_time_in' => $report->scheduled_time_in,
+                'attendance_status' => $report->attendance_status,
+                'late_minutes' => $report->late_minutes,
+                'is_historical' => ! $report->created_at->isSameDay($report->report_date),
+            ]);
 
         return Inertia::render('reports/index', [
             'attendancePolicy' => [
@@ -40,46 +81,18 @@ class DailyReportController extends Controller
                 'graceMinutes' => $attendanceSchedule['graceMinutes'],
                 'verificationMode' => $user->companyRecord?->attendance_verification_mode ?? 'disabled',
             ],
-            'reports' => $user->dailyReports()
-                ->with(['latestCorrectionRequest' => fn ($query) => $query->select([
-                    'attendance_correction_requests.id',
-                    'attendance_correction_requests.daily_report_id',
-                    'attendance_correction_requests.status',
-                ])])
-                ->whereNotNull('summary')
-                ->latest('report_date')
-                ->get([
-                    'id',
-                    'report_date',
-                    'time_in',
-                    'time_out',
-                    'total_hours',
-                    'summary',
-                    'approval_status',
-                    'reviewed_at',
-                    'rejection_reason',
-                    'scheduled_time_in',
-                    'scheduled_grace_minutes',
-                    'attendance_status',
-                    'late_minutes',
-                    'created_at',
-                ])
-                ->map(fn (DailyReport $report): array => [
-                    'id' => $report->id,
-                    'report_date' => $report->report_date->toDateString(),
-                    'time_in' => $report->time_in,
-                    'time_out' => $report->time_out,
-                    'total_hours' => $report->total_hours,
-                    'summary' => $report->summary,
-                    'approval_status' => $report->approval_status,
-                    'reviewed_at' => $report->reviewed_at?->toIso8601String(),
-                    'rejection_reason' => $report->rejection_reason,
-                    'latest_correction_status' => $report->latestCorrectionRequest?->status,
-                    'scheduled_time_in' => $report->scheduled_time_in,
-                    'attendance_status' => $report->attendance_status,
-                    'late_minutes' => $report->late_minutes,
-                    'is_historical' => ! $report->created_at->isSameDay($report->report_date),
-                ]),
+            'reports' => $reports->items(),
+            'reportPagination' => [
+                'currentPage' => $reports->currentPage(),
+                'from' => $reports->count() === 0
+                    ? null
+                    : (($reports->currentPage() - 1) * $reports->perPage()) + 1,
+                'to' => $reports->count() === 0
+                    ? null
+                    : (($reports->currentPage() - 1) * $reports->perPage()) + $reports->count(),
+                'previousPageUrl' => $reports->previousPageUrl(),
+                'nextPageUrl' => $reports->nextPageUrl(),
+            ],
             'activeReport' => $user->dailyReports()
                 ->whereNull('summary')
                 ->oldest('report_date')
@@ -282,7 +295,7 @@ class DailyReportController extends Controller
             'scheduled_grace_minutes' => $attendanceSchedule['graceMinutes'],
             ...$punctuality,
             'time_out' => $timeOut->format('H:i:s'),
-            'total_hours' => DailyReport::calculateTotalHours($timeIn, $timeOut),
+            'total_hours' => $this->calculateTotalHours($user, $timeIn, $timeOut),
             'summary' => $validated['summary'],
             'approval_status' => DailyReport::STATUS_PENDING,
         ]), attempts: 3);
@@ -358,7 +371,9 @@ class DailyReportController extends Controller
 
         $timeIn = Carbon::createFromFormat('H:i:s', $dailyReport->time_in);
         $timeOut = Carbon::createFromFormat('H:i:s', $dailyReport->time_out);
-        $totalHours = DailyReport::calculateTotalHours($timeIn, $timeOut);
+        /** @var User $user */
+        $user = $request->user();
+        $totalHours = $this->calculateTotalHours($user, $timeIn, $timeOut);
 
         DB::transaction(function () use ($dailyReport, $request, $totalHours): void {
             $dailyReport->update([
@@ -371,8 +386,6 @@ class DailyReportController extends Controller
             ]);
         }, attempts: 3);
 
-        /** @var User $user */
-        $user = $request->user();
         $recordActivity->handle(
             $user,
             'report.submitted',
@@ -487,7 +500,22 @@ class DailyReportController extends Controller
         $company = $user->companyRecord;
         $isHoliday = $company !== null && $company->holidays()->whereDate('holiday_date', $date)->exists();
 
+        $holidayAttendanceAllowed = (bool) ($company?->resolvedSettings()['holiday_attendance_allowed'] ?? false);
+
         return in_array($date->dayOfWeekIso, $schedule['workDays'], true)
-            && ! $isHoliday;
+            && (! $isHoliday || $holidayAttendanceAllowed);
+    }
+
+    private function calculateTotalHours(User $user, Carbon $timeIn, Carbon $timeOut): float
+    {
+        $settings = $user->companyRecord?->resolvedSettings() ?? Company::DEFAULT_SETTINGS;
+
+        return DailyReport::calculateTotalHours(
+            $timeIn,
+            $timeOut,
+            (int) $settings['break_minutes'],
+            (string) $settings['break_start_time'],
+            (string) $settings['break_end_time'],
+        );
     }
 }

@@ -27,7 +27,7 @@ export function DashboardWorkspace({
     return (
         <div
             className={cn(
-                'relative isolate flex flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_85%_0%,color-mix(in_oklab,var(--primary)_11%,transparent),transparent_34%),radial-gradient(circle_at_5%_95%,color-mix(in_oklab,var(--primary)_5%,transparent),transparent_28%)]',
+                'relative isolate flex flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_85%_0%,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_36%),radial-gradient(circle_at_5%_95%,color-mix(in_oklab,var(--luxury)_5%,transparent),transparent_30%)]',
                 className,
             )}
         >
@@ -70,20 +70,20 @@ export function DashboardHero({
     actions,
 }: DashboardHeroProps) {
     return (
-        <section className="command-panel relative overflow-hidden rounded-3xl border border-primary/20 bg-card/88 px-5 py-7 backdrop-blur-sm sm:px-7 sm:py-9">
-            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/70 to-transparent" />
+        <section className="command-panel relative overflow-hidden rounded-[2rem] border border-primary/18 bg-card/78 px-5 py-7 backdrop-blur-2xl sm:px-8 sm:py-10">
+            <div className="luxury-divider absolute inset-x-0 top-0 h-px" />
             <div className="absolute -top-24 -right-20 size-64 rounded-full bg-primary/12 blur-3xl" />
-            <div className="absolute right-1/4 -bottom-32 size-56 rounded-full bg-emerald-500/10 blur-3xl" />
+            <div className="absolute right-1/4 -bottom-32 size-56 rounded-full bg-luxury/8 blur-3xl" />
             <div className="absolute top-0 right-12 h-full w-px bg-linear-to-b from-primary/25 via-transparent to-transparent" />
             <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div className="max-w-2xl">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/8 px-3 py-1">
-                        <span className="size-1.5 rounded-full bg-primary shadow-[0_0_12px_var(--primary)]" />
-                        <p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-luxury/20 bg-luxury/6 px-3 py-1 shadow-[inset_0_1px_color-mix(in_oklab,white_8%,transparent)]">
+                        <span className="size-1.5 rounded-full bg-luxury shadow-[0_0_12px_var(--luxury)]" />
+                        <p className="luxury-kicker text-xs font-semibold tracking-[0.16em] uppercase">
                             {eyebrow}
                         </p>
                     </div>
-                    <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+                    <h1 className="mt-4 text-2xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
                         {title}
                     </h1>
                     <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
@@ -118,14 +118,14 @@ export function MetricCard({
     }[accent];
 
     return (
-        <section className="command-panel group relative overflow-hidden rounded-2xl border border-border/80 bg-card/88 p-5 backdrop-blur-sm transition duration-200 hover:border-primary/25 hover:shadow-[0_20px_44px_-24px_color-mix(in_oklab,var(--primary)_45%,transparent)] motion-safe:hover:-translate-y-0.5">
-            <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/55 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+        <section className="command-panel group relative overflow-hidden rounded-3xl border border-border/65 bg-card/80 p-5 backdrop-blur-xl transition duration-300 hover:border-primary/25 hover:bg-card/90 hover:shadow-[0_24px_54px_-30px_color-mix(in_oklab,var(--primary)_48%,transparent)] motion-safe:hover:-translate-y-1">
+            <div className="luxury-divider absolute inset-x-0 top-0 h-px opacity-45 transition-opacity group-hover:opacity-100" />
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <p className="text-sm font-medium text-muted-foreground">
                         {label}
                     </p>
-                    <p className="mt-2 text-2xl font-semibold tracking-tight">
+                    <p className="mt-2 text-3xl font-semibold tracking-[-0.04em]">
                         {value ?? 'Not set'}
                     </p>
                     {detail && (

@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Middleware\ConfigurePasswordResetExpiry;
+use App\Http\Middleware\EnforceWorkspaceSessionTimeout;
 use App\Http\Middleware\EnsureOjtTermsAccepted;
 use App\Http\Middleware\EnsurePrivilegedMfa;
+use App\Http\Middleware\EnsureTenantIsActive;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\UpdateLastSeenAt;
@@ -23,7 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
+            ConfigurePasswordResetExpiry::class,
             HandleAppearance::class,
+            EnsureTenantIsActive::class,
+            EnforceWorkspaceSessionTimeout::class,
             EnsureOjtTermsAccepted::class,
             UpdateLastSeenAt::class,
             EnsurePrivilegedMfa::class,

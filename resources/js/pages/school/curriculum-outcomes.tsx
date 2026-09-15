@@ -204,9 +204,9 @@ export default function CurriculumOutcomes({
                                             </Form>
                                         </div>
                                         <p className="text-xs text-muted-foreground">
-                                            {outcome.completedTaskCount} completed
-                                            task evidence · {outcome.taskCount}{' '}
-                                            total mappings
+                                            {outcome.completedTaskCount}{' '}
+                                            completed task evidence ·{' '}
+                                            {outcome.taskCount} total mappings
                                         </p>
                                     </CardContent>
                                 </Card>

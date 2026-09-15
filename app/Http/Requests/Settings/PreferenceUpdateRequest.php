@@ -28,6 +28,12 @@ class PreferenceUpdateRequest extends FormRequest
             'timezone' => ['required', 'string', Rule::in(User::SUPPORTED_TIMEZONES)],
             'date_format' => ['required', 'string', Rule::in(array_keys(User::SUPPORTED_DATE_FORMATS))],
             'interface_density' => ['required', 'string', Rule::in(array_keys(User::SUPPORTED_INTERFACE_DENSITIES))],
+            'time_format' => ['required', 'string', Rule::in(array_keys(User::SUPPORTED_TIME_FORMATS))],
+            'week_starts_on' => ['required', 'string', Rule::in(array_keys(User::SUPPORTED_WEEK_STARTS))],
+            'font_size' => ['required', 'string', Rule::in(array_keys(User::SUPPORTED_FONT_SIZES))],
+            'quiet_hours_enabled' => ['required', 'boolean'],
+            'quiet_hours_start' => ['required', 'date_format:H:i'],
+            'quiet_hours_end' => ['required', 'date_format:H:i'],
             'reduce_motion' => ['required', 'boolean'],
             'high_contrast' => ['required', 'boolean'],
             'report_updates' => ['required', 'boolean'],
@@ -48,6 +54,7 @@ class PreferenceUpdateRequest extends FormRequest
             'email_workflow_updates' => $this->boolean('email_workflow_updates'),
             'daily_digest' => $this->boolean('daily_digest'),
             'escalation_alerts' => $this->boolean('escalation_alerts'),
+            'quiet_hours_enabled' => $this->boolean('quiet_hours_enabled'),
         ]);
     }
 }

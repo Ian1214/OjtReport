@@ -19,6 +19,7 @@ import {
     MessageCircle,
     Palette,
     ServerCog,
+    ScrollText,
     ArchiveRestore,
     ShieldCheck,
     School,
@@ -26,7 +27,7 @@ import {
     UsersRound,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
-import { index as actionCenterIndex } from '@/routes/actions';
+import { index as actionCenterIndex } from '@/routes/action-center';
 import { edit as appearanceSettings } from '@/routes/appearance';
 import { index as attendanceCalendar } from '@/routes/attendance-calendar';
 import { index as attendanceCorrections } from '@/routes/attendance-corrections';
@@ -50,6 +51,9 @@ import { index as messagesIndex } from '@/routes/messages';
 import { index as notificationsIndex } from '@/routes/notifications';
 import { index as passportsIndex } from '@/routes/passports';
 import { dashboard as platformDashboard } from '@/routes/platform';
+import { index as platformActivityLogs } from '@/routes/platform/activity-logs';
+import { index as platformOperations } from '@/routes/platform/operations';
+import { index as platformTenants } from '@/routes/platform/tenants';
 import { edit as profileSettings } from '@/routes/profile';
 import { index as reportsIndex } from '@/routes/reports';
 import { dashboard as schoolDashboard } from '@/routes/school';
@@ -141,15 +145,40 @@ export function roleNavigation(
             href: platformDashboard(),
             icon: ShieldCheck,
         };
+        const tenants: NavItem = {
+            title: 'Company Access',
+            mobileTitle: 'Companies',
+            href: platformTenants(),
+            icon: Building2,
+        };
+        const operations: NavItem = {
+            title: 'System Operations',
+            mobileTitle: 'Operations',
+            href: platformOperations(),
+            icon: ServerCog,
+        };
+        const auditTrail: NavItem = {
+            title: 'Platform Audit',
+            mobileTitle: 'Audit',
+            href: platformActivityLogs(),
+            icon: ScrollText,
+        };
 
         return {
             sections: [
-                { title: 'Platform', items: [platform] },
+                { title: 'Platform', items: [platform, tenants] },
+                {
+                    title: 'Reliability & Security',
+                    items: [operations, auditTrail],
+                },
                 { title: 'Updates', items: [notifications] },
                 accountSection,
             ],
-            primaryItems: [platform, notifications],
-            moreSections: [accountSection],
+            primaryItems: [platform, tenants, operations],
+            moreSections: [
+                { title: 'Security', items: [auditTrail, notifications] },
+                accountSection,
+            ],
         };
     }
 

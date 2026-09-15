@@ -4,6 +4,7 @@ import {
     BellRing,
     CalendarDays,
     Clock3,
+    CaseUpper,
     LayoutPanelTop,
     ShieldCheck,
 } from 'lucide-react';
@@ -30,6 +31,9 @@ type Props = {
         timezones: string[];
         dateFormats: Record<UserPreferences['date_format'], string>;
         densities: Record<UserPreferences['interface_density'], string>;
+        timeFormats: Record<UserPreferences['time_format'], string>;
+        weekStarts: Record<UserPreferences['week_starts_on'], string>;
+        fontSizes: Record<UserPreferences['font_size'], string>;
     };
 };
 
@@ -68,6 +72,24 @@ export default function Preferences({ preferences, timezone, options }: Props) {
                                     error={errors.timezone}
                                 />
                                 <SelectField
+                                    id="time_format"
+                                    name="time_format"
+                                    label="Time format"
+                                    icon={Clock3}
+                                    defaultValue={preferences.time_format}
+                                    options={options.timeFormats}
+                                    error={errors.time_format}
+                                />
+                                <SelectField
+                                    id="week_starts_on"
+                                    name="week_starts_on"
+                                    label="Week starts on"
+                                    icon={CalendarDays}
+                                    defaultValue={preferences.week_starts_on}
+                                    options={options.weekStarts}
+                                    error={errors.week_starts_on}
+                                />
+                                <SelectField
                                     id="date_format"
                                     name="date_format"
                                     label="Date format"
@@ -95,6 +117,15 @@ export default function Preferences({ preferences, timezone, options }: Props) {
                                 options={options.densities}
                                 error={errors.interface_density}
                             />
+                            <SelectField
+                                id="font_size"
+                                name="font_size"
+                                label="Text size"
+                                icon={CaseUpper}
+                                defaultValue={preferences.font_size}
+                                options={options.fontSizes}
+                                error={errors.font_size}
+                            />
 
                             <PreferenceToggle
                                 name="reduce_motion"
@@ -103,6 +134,49 @@ export default function Preferences({ preferences, timezone, options }: Props) {
                                 description="Minimizes decorative animation and movement throughout the application."
                                 defaultChecked={preferences.reduce_motion}
                             />
+                            <PreferenceToggle
+                                name="quiet_hours_enabled"
+                                icon={Clock3}
+                                title="Notification quiet hours"
+                                description="Suppress non-critical alerts during your selected rest window."
+                                defaultChecked={preferences.quiet_hours_enabled}
+                            />
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="quiet_hours_start">
+                                        Quiet hours start
+                                    </Label>
+                                    <input
+                                        id="quiet_hours_start"
+                                        name="quiet_hours_start"
+                                        type="time"
+                                        defaultValue={
+                                            preferences.quiet_hours_start
+                                        }
+                                        className="h-10 rounded-md border bg-background px-3 text-sm"
+                                    />
+                                    <InputError
+                                        message={errors.quiet_hours_start}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="quiet_hours_end">
+                                        Quiet hours end
+                                    </Label>
+                                    <input
+                                        id="quiet_hours_end"
+                                        name="quiet_hours_end"
+                                        type="time"
+                                        defaultValue={
+                                            preferences.quiet_hours_end
+                                        }
+                                        className="h-10 rounded-md border bg-background px-3 text-sm"
+                                    />
+                                    <InputError
+                                        message={errors.quiet_hours_end}
+                                    />
+                                </div>
+                            </div>
                             <PreferenceToggle
                                 name="high_contrast"
                                 icon={ShieldCheck}
@@ -239,6 +313,7 @@ function PreferenceToggle({
         | 'email_workflow_updates'
         | 'daily_digest'
         | 'escalation_alerts'
+        | 'quiet_hours_enabled'
     >;
     icon: typeof Accessibility;
     title: string;

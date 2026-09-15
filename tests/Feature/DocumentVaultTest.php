@@ -2,6 +2,7 @@
 
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\PlatformSetting;
 use App\Models\School;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -32,6 +33,32 @@ test('an administrator uploads a private document assigned to its OJT', function
         ->and($document->shared_with_school)->toBeTrue()
         ->and($document->status)->toBe(Document::STATUS_APPROVED);
     Storage::disk('local')->assertExists($document->path);
+});
+
+test('company document uploads cannot exceed the platform storage limit', function () {
+    Storage::fake('local');
+    PlatformSetting::query()->create([
+        'key' => PlatformSetting::POLICY_KEY,
+        'value' => [...PlatformSetting::DEFAULT_POLICY, 'default_storage_limit_mb' => 1],
+    ]);
+    $company = Company::factory()->create();
+    $admin = User::factory()->create(['company_id' => $company->id, 'role' => 'company_admin']);
+    $ojt = User::factory()->create(['company_id' => $company->id]);
+    Document::factory()->create([
+        'company_id' => $company->id,
+        'ojt_id' => $ojt->id,
+        'uploaded_by' => $admin->id,
+        'size' => 900 * 1024,
+    ]);
+
+    $this->actingAs($admin)->post(route('documents.store'), [
+        'title' => 'Large file',
+        'category' => 'other',
+        'ojt_id' => $ojt->id,
+        'document' => UploadedFile::fake()->create('large.pdf', 200, 'application/pdf'),
+    ])->assertInvalid(['document']);
+
+    expect(Document::query()->count())->toBe(1);
 });
 
 test('an OJT submits a document only for their own account and awaits administrator review', function () {

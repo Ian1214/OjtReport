@@ -44,6 +44,8 @@
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
+    --color-luxury: var(--luxury);
+    --color-luxury-foreground: var(--luxury-foreground);
 
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
@@ -81,12 +83,14 @@
     --border: oklch(0.87 0.025 210);
     --input: oklch(0.86 0.027 210);
     --ring: oklch(0.65 0.13 196);
+    --luxury: oklch(0.68 0.105 79);
+    --luxury-foreground: oklch(0.22 0.035 67);
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);
     --chart-4: oklch(0.828 0.189 84.429);
     --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.75rem;
+    --radius: 0.875rem;
     --sidebar: oklch(0.965 0.015 218);
     --sidebar-foreground: oklch(0.2 0.03 225);
     --sidebar-primary: oklch(0.61 0.135 196);
@@ -117,6 +121,8 @@
     --border: oklch(0.31 0.035 215);
     --input: oklch(0.29 0.035 215);
     --ring: oklch(0.72 0.13 194);
+    --luxury: oklch(0.79 0.105 82);
+    --luxury-foreground: oklch(0.16 0.025 70);
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
     --chart-3: oklch(0.769 0.188 70.08);
@@ -133,6 +139,10 @@
 }
 
 @layer base {
+    html.user-font-large {
+        font-size: 112.5%;
+    }
+
     * {
         @apply border-border;
     }
@@ -141,14 +151,14 @@
         @apply bg-background text-foreground antialiased;
         background-image:
             radial-gradient(
-                circle at 80% 0%,
-                color-mix(in oklab, var(--primary) 8%, transparent),
-                transparent 28rem
+                circle at 82% -5%,
+                color-mix(in oklab, var(--primary) 10%, transparent),
+                transparent 34rem
             ),
             radial-gradient(
-                circle at 10% 90%,
-                color-mix(in oklab, var(--chart-2) 6%, transparent),
-                transparent 26rem
+                circle at 8% 100%,
+                color-mix(in oklab, var(--luxury) 5%, transparent),
+                transparent 32rem
             );
         background-attachment: fixed;
     }
@@ -205,12 +215,18 @@
             ),
             radial-gradient(
                 circle at 85% 10%,
-                color-mix(in oklab, var(--primary) 10%, transparent),
+                color-mix(in oklab, var(--primary) 11%, transparent),
                 transparent 30rem
+            ),
+            radial-gradient(
+                circle at 18% 88%,
+                color-mix(in oklab, var(--luxury) 4%, transparent),
+                transparent 26rem
             );
         background-size:
             44px 44px,
             44px 44px,
+            auto,
             auto;
     }
 
@@ -230,9 +246,27 @@
 
     .command-panel {
         box-shadow:
-            0 24px 80px -48px
-                color-mix(in oklab, var(--primary) 48%, transparent),
-            inset 0 1px color-mix(in oklab, white 4%, transparent);
+            0 30px 90px -54px
+                color-mix(in oklab, var(--primary) 52%, transparent),
+            0 16px 45px -36px
+                color-mix(in oklab, var(--luxury) 22%, transparent),
+            inset 0 1px color-mix(in oklab, white 7%, transparent);
+    }
+
+    .luxury-kicker {
+        color: var(--luxury);
+        text-shadow: 0 0 24px
+            color-mix(in oklab, var(--luxury) 28%, transparent);
+    }
+
+    .luxury-divider {
+        background: linear-gradient(
+            90deg,
+            transparent,
+            color-mix(in oklab, var(--luxury) 62%, transparent),
+            color-mix(in oklab, var(--primary) 45%, transparent),
+            transparent
+        );
     }
 
     .status-pulse {

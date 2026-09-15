@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Actions\PruneExpiredSystemBackups;
 use App\Models\SystemBackup;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
@@ -15,7 +16,7 @@ class CreateSystemBackup extends Command
 
     protected $description = 'Create a checksum-protected database backup';
 
-    public function handle(): int
+    public function handle(PruneExpiredSystemBackups $pruneExpiredBackups): int
     {
         $disk = (string) config('operations.backup.disk');
         $path = Str::finish((string) config('operations.backup.path'), '/').'database-'.now()->format('Ymd-His').'.sql';
@@ -50,7 +51,7 @@ class CreateSystemBackup extends Command
                 'checksum' => hash_file('sha256', $temporaryPath),
                 'completed_at' => now(),
             ]);
-            $this->pruneExpiredBackups($disk);
+            $pruneExpiredBackups->handle($disk);
             $this->info("Backup created: {$path}");
 
             return self::SUCCESS;
@@ -65,16 +66,5 @@ class CreateSystemBackup extends Command
                 unlink($temporaryPath);
             }
         }
-    }
-
-    private function pruneExpiredBackups(string $disk): void
-    {
-        SystemBackup::query()
-            ->where('disk', $disk)
-            ->where('created_at', '<', now()->subDays((int) config('operations.backup.retention_days')))
-            ->eachById(function (SystemBackup $expired): void {
-                Storage::disk($expired->disk)->delete($expired->path);
-                $expired->delete();
-            });
     }
 }

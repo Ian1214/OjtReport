@@ -5,16 +5,16 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-    "inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform,opacity] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50 disabled:hover:translate-y-0 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[loading]:pointer-events-none data-[loading]:opacity-60 motion-safe:hover:-translate-y-px dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    "inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50 disabled:hover:translate-y-0 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[loading]:pointer-events-none data-[loading]:opacity-60 motion-safe:hover:-translate-y-px motion-safe:active:translate-y-0 motion-safe:active:scale-[0.985] dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
     {
         variants: {
             variant: {
                 default:
-                    'border border-primary/55 bg-primary text-primary-foreground shadow-[0_10px_28px_-16px_color-mix(in_oklab,var(--primary)_80%,transparent),inset_0_1px_color-mix(in_oklab,white_22%,transparent)] hover:bg-primary/90 hover:shadow-[0_14px_34px_-16px_color-mix(in_oklab,var(--primary)_90%,transparent)]',
+                    'border border-primary/45 bg-linear-to-br from-primary via-primary to-primary/80 text-primary-foreground shadow-[0_14px_34px_-20px_color-mix(in_oklab,var(--primary)_90%,transparent),inset_0_1px_color-mix(in_oklab,white_30%,transparent)] hover:border-primary/65 hover:shadow-[0_18px_42px_-20px_color-mix(in_oklab,var(--primary)_95%,transparent)] hover:brightness-105',
                 destructive:
                     'bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
                 outline:
-                    'border border-input bg-background/65 shadow-[inset_0_1px_color-mix(in_oklab,white_5%,transparent)] backdrop-blur-sm hover:border-primary/30 hover:bg-accent hover:text-accent-foreground',
+                    'border border-input/80 bg-background/55 shadow-[inset_0_1px_color-mix(in_oklab,white_8%,transparent)] backdrop-blur-xl hover:border-luxury/35 hover:bg-accent/80 hover:text-accent-foreground hover:shadow-[0_14px_30px_-24px_color-mix(in_oklab,var(--luxury)_55%,transparent)]',
                 secondary:
                     'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80',
                 ghost: 'hover:bg-accent/75 hover:text-accent-foreground',

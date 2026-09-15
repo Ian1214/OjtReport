@@ -2,6 +2,8 @@ import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     Check,
     CalendarSync,
+    ChevronLeft,
+    ChevronRight,
     Clock3,
     Copy,
     FileText,
@@ -80,6 +82,13 @@ type ActiveReport = {
 
 type Props = {
     reports: DailyReport[];
+    reportPagination: {
+        currentPage: number;
+        from: number | null;
+        to: number | null;
+        previousPageUrl: string | null;
+        nextPageUrl: string | null;
+    };
     activeReport: ActiveReport | null;
     attendancePolicy: {
         workStartTime: string;
@@ -96,6 +105,7 @@ type Props = {
 
 export default function ReportsIndex({
     reports,
+    reportPagination,
     activeReport,
     attendancePolicy,
     historicalEntry,
@@ -197,133 +207,237 @@ export default function ReportsIndex({
                             </CardContent>
                         </Card>
                     ) : (
-                        reports.map((report) => {
-                            const reportText = formatReportForClipboard(
-                                report,
-                                auth.user,
-                            );
-                            const isCopied = copiedText === reportText;
+                        <>
+                            <div className="grid items-stretch gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+                                {reports.map((report) => {
+                                    const reportText = formatReportForClipboard(
+                                        report,
+                                        auth.user,
+                                    );
+                                    const isCopied = copiedText === reportText;
 
-                            return (
-                                <Card key={report.id}>
-                                    <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                        <div>
-                                            <CardTitle>
-                                                {formatDate(report.report_date)}
-                                            </CardTitle>
-                                            <CardDescription className="mt-1">
-                                                {formatTime(report.time_in)} –{' '}
-                                                {formatTime(report.time_out)}
-                                            </CardDescription>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <ReportStatusBadge
-                                                status={report.approval_status}
-                                            />
-                                            {report.is_historical && (
-                                                <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/25 bg-primary/8 px-2.5 text-xs font-semibold text-primary">
-                                                    <History className="size-3.5" />
-                                                    Past entry
-                                                </span>
-                                            )}
-                                            <PunctualityBadge report={report} />
+                                    return (
+                                        <Card
+                                            key={report.id}
+                                            className="group flex h-full min-w-0 flex-col overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
+                                        >
+                                            <CardHeader className="gap-4 border-b border-border/60 bg-muted/15">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <CardTitle>
+                                                            {formatDate(
+                                                                report.report_date,
+                                                            )}
+                                                        </CardTitle>
+                                                        <CardDescription className="mt-1">
+                                                            {formatTime(
+                                                                report.time_in,
+                                                            )}{' '}
+                                                            –{' '}
+                                                            {formatTime(
+                                                                report.time_out,
+                                                            )}
+                                                        </CardDescription>
+                                                    </div>
+                                                    <ReportStatusBadge
+                                                        status={
+                                                            report.approval_status
+                                                        }
+                                                    />
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {report.is_historical && (
+                                                        <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/25 bg-primary/8 px-2.5 text-xs font-semibold text-primary">
+                                                            <History className="size-3.5" />
+                                                            Past entry
+                                                        </span>
+                                                    )}
+                                                    <PunctualityBadge
+                                                        report={report}
+                                                    />
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent className="grid flex-1 grid-cols-2 content-start gap-x-4 gap-y-5 pt-5 text-sm">
+                                                {report.approval_status ===
+                                                    'rejected' && (
+                                                    <div className="col-span-2 flex gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                                                        <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
+                                                        <div>
+                                                            <p className="font-medium text-destructive">
+                                                                Correction
+                                                                required
+                                                            </p>
+                                                            <p className="mt-1 text-muted-foreground">
+                                                                {
+                                                                    report.rejection_reason
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <ReportDetail
+                                                    label="Name"
+                                                    value={auth.user.name}
+                                                    className="col-span-2"
+                                                />
+                                                <ReportDetail
+                                                    label="Position / Department"
+                                                    value={`${auth.user.position} / ${auth.user.department}`}
+                                                    className="col-span-2"
+                                                />
+                                                <ReportDetail
+                                                    label="Time In"
+                                                    value={formatTime(
+                                                        report.time_in,
+                                                    )}
+                                                />
+                                                <ReportDetail
+                                                    label="Time Out"
+                                                    value={formatTime(
+                                                        report.time_out,
+                                                    )}
+                                                />
+                                                <ReportDetail
+                                                    label="Arrival Status"
+                                                    value={formatPunctuality(
+                                                        report,
+                                                    )}
+                                                />
+                                                <ReportDetail
+                                                    label="Total Hours"
+                                                    value={`${report.total_hours} hours`}
+                                                />
+                                                <ReportDetail
+                                                    label="Summary of the Day's Work"
+                                                    value={report.summary}
+                                                    className="col-span-2 rounded-xl bg-muted/25 p-3"
+                                                />
+                                            </CardContent>
+                                            <div className="flex flex-wrap gap-2 border-t border-border/60 p-4">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex-1"
+                                                    onClick={() =>
+                                                        copy(reportText)
+                                                    }
+                                                >
+                                                    {isCopied ? (
+                                                        <Check />
+                                                    ) : (
+                                                        <Copy />
+                                                    )}
+                                                    {isCopied
+                                                        ? 'Copied'
+                                                        : 'Copy report'}
+                                                </Button>
+                                                {report.approval_status ===
+                                                    'rejected' && (
+                                                    <>
+                                                        <EditReportDialog
+                                                            report={report}
+                                                        />
+                                                        <DeleteReportDialog
+                                                            report={report}
+                                                        />
+                                                    </>
+                                                )}
+                                                {report.approval_status ===
+                                                    'approved' &&
+                                                    ![
+                                                        'pending_supervisor',
+                                                        'pending_admin',
+                                                    ].includes(
+                                                        report.latest_correction_status ??
+                                                            '',
+                                                    ) && (
+                                                        <CorrectionRequestDialog
+                                                            report={report}
+                                                        />
+                                                    )}
+                                            </div>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="flex flex-col gap-3 rounded-xl border bg-muted/15 p-3">
+                                <p className="text-sm text-muted-foreground">
+                                    Showing reports {reportPagination.from}–
+                                    {reportPagination.to}
+                                </p>
+                                {(reportPagination.previousPageUrl !== null ||
+                                    reportPagination.nextPageUrl !== null) && (
+                                    <div className="flex w-full flex-nowrap items-center justify-end gap-2">
+                                        {reportPagination.previousPageUrl ? (
                                             <Button
-                                                type="button"
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => copy(reportText)}
+                                                className="w-auto shrink-0 flex-row whitespace-nowrap"
+                                                asChild
                                             >
-                                                {isCopied ? (
-                                                    <Check />
-                                                ) : (
-                                                    <Copy />
-                                                )}
-                                                {isCopied
-                                                    ? 'Copied'
-                                                    : 'Copy report'}
+                                                <Link
+                                                    href={
+                                                        reportPagination.previousPageUrl
+                                                    }
+                                                    preserveScroll
+                                                    only={[
+                                                        'reports',
+                                                        'reportPagination',
+                                                    ]}
+                                                >
+                                                    <ChevronLeft />
+                                                    Previous
+                                                </Link>
                                             </Button>
-                                            {report.approval_status ===
-                                                'rejected' && (
-                                                <>
-                                                    <EditReportDialog
-                                                        report={report}
-                                                    />
-                                                    <DeleteReportDialog
-                                                        report={report}
-                                                    />
-                                                </>
-                                            )}
-                                            {report.approval_status ===
-                                                'approved' &&
-                                                ![
-                                                    'pending_supervisor',
-                                                    'pending_admin',
-                                                ].includes(
-                                                    report.latest_correction_status ??
-                                                        '',
-                                                ) && (
-                                                    <CorrectionRequestDialog
-                                                        report={report}
-                                                    />
-                                                )}
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
-                                        {report.approval_status ===
-                                            'rejected' && (
-                                            <div className="flex gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 sm:col-span-2">
-                                                <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
-                                                <div>
-                                                    <p className="font-medium text-destructive">
-                                                        Correction required
-                                                    </p>
-                                                    <p className="mt-1 text-muted-foreground">
-                                                        {
-                                                            report.rejection_reason
-                                                        }
-                                                    </p>
-                                                </div>
-                                            </div>
+                                        ) : (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-auto shrink-0 flex-row whitespace-nowrap"
+                                                disabled
+                                            >
+                                                <ChevronLeft />
+                                                Previous
+                                            </Button>
                                         )}
-                                        <ReportDetail
-                                            label="Name"
-                                            value={auth.user.name}
-                                        />
-                                        <ReportDetail
-                                            label="OJT Position / Department"
-                                            value={`${auth.user.position} / ${auth.user.department}`}
-                                        />
-                                        <ReportDetail
-                                            label="Date"
-                                            value={formatDate(
-                                                report.report_date,
-                                            )}
-                                        />
-                                        <ReportDetail
-                                            label="Time In"
-                                            value={formatTime(report.time_in)}
-                                        />
-                                        <ReportDetail
-                                            label="Arrival Status"
-                                            value={formatPunctuality(report)}
-                                        />
-                                        <ReportDetail
-                                            label="Time Out"
-                                            value={formatTime(report.time_out)}
-                                        />
-                                        <ReportDetail
-                                            label="Total Hours"
-                                            value={`${report.total_hours} hours`}
-                                        />
-                                        <ReportDetail
-                                            label="Summary of the Day's Work"
-                                            value={report.summary}
-                                            className="sm:col-span-2"
-                                        />
-                                    </CardContent>
-                                </Card>
-                            );
-                        })
+                                        {reportPagination.nextPageUrl ? (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-auto shrink-0 flex-row whitespace-nowrap"
+                                                asChild
+                                            >
+                                                <Link
+                                                    href={
+                                                        reportPagination.nextPageUrl
+                                                    }
+                                                    preserveScroll
+                                                    only={[
+                                                        'reports',
+                                                        'reportPagination',
+                                                    ]}
+                                                >
+                                                    Next
+                                                    <ChevronRight />
+                                                </Link>
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-auto shrink-0 flex-row whitespace-nowrap"
+                                                disabled
+                                            >
+                                                Next
+                                                <ChevronRight />
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </>
                     )}
                 </section>
             </div>

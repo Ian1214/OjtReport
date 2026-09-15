@@ -104,6 +104,11 @@ class ManagedOjtController extends Controller
 
         return Inertia::render('company/dashboard', [
             'company' => ['name' => $company->name],
+            'ojtDefaults' => [
+                'requiredHours' => (int) $company->resolvedSettings()['default_required_hours'],
+                'program' => (string) $company->resolvedSettings()['default_program'],
+                'yearLevel' => (int) $company->resolvedSettings()['default_year_level'],
+            ],
             'ojts' => $ojtPaginator->getCollection()
                 ->map(fn (User $ojt): array => [
                     'id' => $ojt->id,

@@ -9,10 +9,14 @@ import {
     Palette,
     ShieldCheck,
     UserRound,
+    Building2,
+    ServerCog,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { edit as editAppearance } from '@/routes/appearance';
+import { edit as organizationSettings } from '@/routes/organization-settings';
+import { edit as platformSettings } from '@/routes/platform-settings';
 import { edit as editPreferences } from '@/routes/preferences';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
@@ -89,6 +93,27 @@ export default function SettingsIndex({ security, preferences }: Props) {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
+                    {auth.user.role === 'platform_admin' && (
+                        <SettingsCard
+                            href={platformSettings()}
+                            icon={ServerCog}
+                            title="Platform policy"
+                            description="Registration, tenant limits, reliability, support, and security defaults"
+                        />
+                    )}
+                    {(auth.user.role === 'company_admin' ||
+                        auth.user.role === 'school_coordinator') && (
+                        <SettingsCard
+                            href={organizationSettings()}
+                            icon={Building2}
+                            title={
+                                auth.user.role === 'company_admin'
+                                    ? 'Company settings'
+                                    : 'School settings'
+                            }
+                            description="Identity, branding, policies, defaults, notifications, and retention"
+                        />
+                    )}
                     <SettingsCard
                         href={editProfile()}
                         icon={UserRound}

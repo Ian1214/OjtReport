@@ -101,6 +101,11 @@ type Department = {
 
 type Props = {
     company: { name: string };
+    ojtDefaults: {
+        requiredHours: number;
+        program: string;
+        yearLevel: number;
+    };
     ojts: Ojt[];
     filters: {
         search: string;
@@ -132,6 +137,7 @@ type CreatedAccount = {
 
 export default function CompanyDashboard({
     company,
+    ojtDefaults,
     ojts,
     filters,
     pagination,
@@ -254,6 +260,7 @@ export default function CompanyDashboard({
                 {showCreateForm && (
                     <CreateOjtForm
                         supervisors={supervisors}
+                        defaults={ojtDefaults}
                         departments={departments
                             .filter((department) => department.isActive)
                             .map((department) => department.name)}
@@ -571,10 +578,12 @@ function PaginationButton({
 function CreateOjtForm({
     supervisors,
     departments,
+    defaults,
     onSuccess,
 }: {
     supervisors: Supervisor[];
     departments: string[];
+    defaults: Props['ojtDefaults'];
     onSuccess: () => void;
 }) {
     const [departmentOption, setDepartmentOption] = useState('');
@@ -635,12 +644,24 @@ function CreateOjtForm({
                                         id="program"
                                         name="program"
                                         required
-                                        defaultValue=""
+                                        defaultValue={defaults.program}
                                         className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                     >
                                         <option value="" disabled>
                                             Select program
                                         </option>
+                                        {defaults.program !== '' &&
+                                            !programs.some(
+                                                (program) =>
+                                                    program ===
+                                                    defaults.program,
+                                            ) && (
+                                                <option
+                                                    value={defaults.program}
+                                                >
+                                                    {defaults.program}
+                                                </option>
+                                            )}
                                         {programs.map((program) => (
                                             <option
                                                 key={program}
@@ -659,6 +680,7 @@ function CreateOjtForm({
                                     min="1"
                                     max="6"
                                     placeholder="4"
+                                    defaultValue={String(defaults.yearLevel)}
                                     error={errors.year}
                                 />
                                 <Field
@@ -666,8 +688,10 @@ function CreateOjtForm({
                                     name="required_hours"
                                     type="number"
                                     min="1"
-                                    placeholder="486"
-                                    defaultValue="486"
+                                    placeholder={String(defaults.requiredHours)}
+                                    defaultValue={String(
+                                        defaults.requiredHours,
+                                    )}
                                     error={errors.required_hours}
                                 />
                                 <div className="grid gap-2">

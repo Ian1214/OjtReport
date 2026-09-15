@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -47,6 +48,7 @@ class FortifyServiceProvider extends ServiceProvider
 
             return $user !== null
                 && $user->account_active
+                && ($user->isPlatformAdmin() || $user->company_id === null || $user->companyRecord()->where('status', Company::STATUS_ACTIVE)->exists())
                 && Hash::check((string) $request->input('password'), $user->password)
                     ? $user
                     : null;

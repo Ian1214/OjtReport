@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Company;
 
+use App\Actions\EnsureCompanyUserCapacity;
 use App\Actions\RecordActivity;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSupervisorRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -14,28 +16,35 @@ use Inertia\Inertia;
 
 class SupervisorController extends Controller
 {
-    public function store(StoreSupervisorRequest $request, RecordActivity $recordActivity): RedirectResponse
-    {
+    public function store(
+        StoreSupervisorRequest $request,
+        RecordActivity $recordActivity,
+        EnsureCompanyUserCapacity $ensureCompanyUserCapacity,
+    ): RedirectResponse {
         /** @var User $companyAdmin */
         $companyAdmin = $request->user();
         $company = $companyAdmin->companyRecord;
 
         Gate::authorize('update', $company);
 
-        $supervisor = $company->users()->create([
-            ...$request->validated(),
-            'role' => 'supervisor',
-            'company' => $company->name,
-            'student_id' => 'SUP-'.Str::upper(Str::random(12)),
-            'program' => 'Not applicable',
-            'year' => 0,
-            'department' => 'Supervision',
-            'position' => 'OJT Supervisor',
-            'required_hours' => 0,
-            'password' => Str::password(32, letters: true, numbers: true, symbols: false),
-            'must_change_password' => true,
-            'email_verified_at' => now(),
-        ]);
+        $supervisor = DB::transaction(function () use ($company, $request, $ensureCompanyUserCapacity): User {
+            $ensureCompanyUserCapacity->handle($company);
+
+            return $company->users()->create([
+                ...$request->validated(),
+                'role' => 'supervisor',
+                'company' => $company->name,
+                'student_id' => 'SUP-'.Str::upper(Str::random(12)),
+                'program' => 'Not applicable',
+                'year' => 0,
+                'department' => 'Supervision',
+                'position' => 'OJT Supervisor',
+                'required_hours' => 0,
+                'password' => Str::password(32, letters: true, numbers: true, symbols: false),
+                'must_change_password' => true,
+                'email_verified_at' => now(),
+            ]);
+        }, attempts: 3);
 
         $status = Password::sendResetLink(['email' => $supervisor->email]);
 

@@ -30,14 +30,14 @@ export function AppSidebar() {
         <Sidebar
             collapsible="icon"
             variant="inset"
-            className="border-r border-sidebar-border/70 bg-sidebar/95 shadow-[18px_0_55px_-38px_color-mix(in_oklab,var(--primary)_60%,transparent)] backdrop-blur-xl"
+            className="border-r border-sidebar-border/55 bg-sidebar/90 shadow-[22px_0_70px_-48px_color-mix(in_oklab,var(--primary)_70%,transparent)] backdrop-blur-2xl"
         >
-            <SidebarHeader className="relative p-3 pb-2 after:absolute after:inset-x-4 after:bottom-0 after:h-px after:bg-linear-to-r after:from-transparent after:via-sidebar-primary/35 after:to-transparent">
+            <SidebarHeader className="relative p-3 pb-2 after:absolute after:inset-x-4 after:bottom-0 after:h-px after:bg-linear-to-r after:from-transparent after:via-luxury/35 after:to-sidebar-primary/20">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             size="lg"
-                            className="command-panel h-14 rounded-2xl border border-sidebar-primary/15 bg-sidebar-accent/35 px-3 transition-all hover:border-sidebar-primary/35 hover:bg-sidebar-accent"
+                            className="command-panel h-14 rounded-2xl border border-sidebar-primary/12 bg-sidebar-accent/28 px-3 shadow-[inset_0_1px_color-mix(in_oklab,white_7%,transparent)] transition-all duration-300 hover:border-luxury/25 hover:bg-sidebar-accent/70"
                             asChild
                         >
                             <Link href={dashboard()} prefetch>
@@ -51,7 +51,7 @@ export function AppSidebar() {
                         {workspaceLabel(auth.user.role)}
                     </p>
                     <div className="mt-1 flex items-center gap-1.5 text-xs text-sidebar-foreground/65">
-                        <span className="status-pulse size-1.5 rounded-full bg-sidebar-primary" />
+                        <span className="status-pulse size-1.5 rounded-full bg-luxury" />
                         Secure workspace
                     </div>
                 </div>
@@ -61,7 +61,7 @@ export function AppSidebar() {
                 <NavMain sections={sections} />
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-sidebar-border/70 bg-sidebar-accent/10 p-2">
+            <SidebarFooter className="border-t border-sidebar-border/55 bg-sidebar-accent/8 p-2 backdrop-blur-xl">
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

@@ -76,7 +76,7 @@ export default function SupervisorDashboard({ ojts }: { ojts: Ojt[] }) {
     const priorityOjt =
         ojts.find((ojt) => ojt.unreadCount > 0) ?? ojts.at(0) ?? null;
 
-    usePoll(15_000, { only: ['ojts', 'navigation'] }, { mode: 'rest' });
+    usePoll(15_000, { only: ['ojts'] }, { mode: 'rest' });
 
     return (
         <>

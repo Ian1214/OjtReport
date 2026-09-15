@@ -19,6 +19,7 @@ class CompanyFactory extends Factory
     {
         return [
             'name' => fake()->company(),
+            'status' => Company::STATUS_ACTIVE,
             'work_start_time' => '08:00:00',
             'late_grace_minutes' => 0,
             'timezone' => 'Asia/Manila',

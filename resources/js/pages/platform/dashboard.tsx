@@ -23,6 +23,7 @@ type Props = {
     companies: {
         id: number;
         name: string;
+        status: 'active' | 'suspended' | 'archived';
         users: number;
         activeUsers: number;
         ojts: number;
@@ -130,15 +131,11 @@ export default function PlatformDashboard({ stats, companies, health }: Props) {
                                 </span>
                                 <StatusBadge
                                     status={
-                                        company.activeUsers > 0
+                                        company.status === 'active'
                                             ? 'online'
                                             : 'pending'
                                     }
-                                    label={
-                                        company.activeUsers > 0
-                                            ? 'Active'
-                                            : 'Inactive'
-                                    }
+                                    label={company.status}
                                 />
                             </article>
                         ))}

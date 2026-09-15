@@ -142,10 +142,25 @@ class User extends Authenticatable implements PasskeyUser
         'compact' => 'Compact',
     ];
 
+    /** @var array<string, string> */
+    public const SUPPORTED_TIME_FORMATS = ['twelve_hour' => '12-hour', 'twenty_four_hour' => '24-hour'];
+
+    /** @var array<string, string> */
+    public const SUPPORTED_WEEK_STARTS = ['monday' => 'Monday', 'sunday' => 'Sunday'];
+
+    /** @var array<string, string> */
+    public const SUPPORTED_FONT_SIZES = ['standard' => 'Standard', 'large' => 'Large'];
+
     /** @var array<string, bool|string> */
     public const DEFAULT_PREFERENCES = [
         'date_format' => 'month_first',
         'interface_density' => 'comfortable',
+        'time_format' => 'twelve_hour',
+        'week_starts_on' => 'monday',
+        'font_size' => 'standard',
+        'quiet_hours_enabled' => false,
+        'quiet_hours_start' => '20:00',
+        'quiet_hours_end' => '07:00',
         'reduce_motion' => false,
         'high_contrast' => false,
         'report_updates' => true,

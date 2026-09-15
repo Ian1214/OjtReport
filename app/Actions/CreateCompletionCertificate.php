@@ -15,7 +15,7 @@ class CreateCompletionCertificate
     public function handle(User $administrator, int $ojtId, string $hours, string $signatureData): CompletionCertificate
     {
         return DB::transaction(function () use ($administrator, $ojtId, $hours, $signatureData): CompletionCertificate {
-            $ojt = User::query()->with('companyRecord:id,name')->lockForUpdate()->findOrFail($ojtId);
+            $ojt = User::query()->with('companyRecord:id,name,settings')->lockForUpdate()->findOrFail($ojtId);
 
             abort_unless($ojt->role === 'ojt' && $ojt->company_id === $administrator->company_id, 404);
 
@@ -37,7 +37,7 @@ class CreateCompletionCertificate
             }
 
             return CompletionCertificate::query()->create([
-                'certificate_number' => 'CERT-'.now()->format('Y').'-'.Str::upper((string) Str::ulid()),
+                'certificate_number' => (string) ($ojt->companyRecord?->resolvedSettings()['certificate_number_prefix'] ?? 'CERT').'-'.now()->format('Y').'-'.Str::upper((string) Str::ulid()),
                 'company_id' => $administrator->company_id,
                 'user_id' => $ojt->id,
                 'supervisor_id' => $ojt->supervisor_id,

@@ -21,6 +21,9 @@ class PreferenceController extends Controller
                 'timezones' => User::SUPPORTED_TIMEZONES,
                 'dateFormats' => User::SUPPORTED_DATE_FORMATS,
                 'densities' => User::SUPPORTED_INTERFACE_DENSITIES,
+                'timeFormats' => User::SUPPORTED_TIME_FORMATS,
+                'weekStarts' => User::SUPPORTED_WEEK_STARTS,
+                'fontSizes' => User::SUPPORTED_FONT_SIZES,
             ],
         ]);
     }
@@ -34,6 +37,12 @@ class PreferenceController extends Controller
             'preferences' => [
                 'date_format' => $validated['date_format'],
                 'interface_density' => $validated['interface_density'],
+                'time_format' => $validated['time_format'],
+                'week_starts_on' => $validated['week_starts_on'],
+                'font_size' => $validated['font_size'],
+                'quiet_hours_enabled' => $validated['quiet_hours_enabled'],
+                'quiet_hours_start' => $validated['quiet_hours_start'],
+                'quiet_hours_end' => $validated['quiet_hours_end'],
                 'reduce_motion' => $validated['reduce_motion'],
                 'high_contrast' => $validated['high_contrast'],
                 'report_updates' => $validated['report_updates'],

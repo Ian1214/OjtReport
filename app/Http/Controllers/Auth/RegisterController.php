@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\Company;
+use App\Models\PlatformSetting;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -16,11 +17,15 @@ class RegisterController extends Controller
 {
     public function create(): Response
     {
+        abort_unless(PlatformSetting::resolvedPolicy()['company_registration_enabled'], 403, 'Company registration is currently closed.');
+
         return Inertia::render('auth/register');
     }
 
     public function store(RegisterRequest $request): RedirectResponse
     {
+        abort_unless(PlatformSetting::resolvedPolicy()['company_registration_enabled'], 403, 'Company registration is currently closed.');
+
         $user = DB::transaction(function () use ($request): User {
             $validated = $request->validated();
             $company = Company::create(['name' => $validated['company_name']]);

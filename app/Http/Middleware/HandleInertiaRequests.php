@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\AttendanceCorrectionRequest;
 use App\Models\DailyReport;
 use App\Models\DirectMessage;
+use App\Models\PlatformAnnouncement;
 use App\Models\User;
 use App\Support\CompanyPermissions;
 use Illuminate\Database\Eloquent\Builder;
@@ -89,6 +90,11 @@ class HandleInertiaRequests extends Middleware
                     default => 0,
                 },
             ],
+            'platformAnnouncement' => fn (): ?array => PlatformAnnouncement::query()
+                ->currentlyVisible()
+                ->latest('published_at')
+                ->first()
+                ?->only(['id', 'title', 'message', 'severity', 'ends_at']),
             'flash' => [
                 'createdAccount' => fn () => $request->session()->get('createdAccount'),
                 'status' => fn () => $request->session()->get('status'),
